@@ -31,12 +31,10 @@ class LudicConnect {
       this.lobby = lobby;
       WebRTCHelper.handleOffer(lobby.offer).then(result => {
         WebRTCHelper.createAnswer(lobby.offer).then(answer => {
-          console.log(answer);
           this.lobby.answer = JSON.stringify(answer);
-          console.log(this.lobby);
           DB.stopWatchingLobby();
           DB.updateLobby(this.lobby);
-          console.log(WebRTCHelper.dc);
+          WebRTCHelper.dc.send("fuck");
         });
       });
     }
@@ -48,7 +46,8 @@ class LudicConnect {
     this.lobby = lobby;
     console.log(this.lobby);
     WebRTCHelper.handleOffer(lobby.offer).then(result => {
-      console.log(WebRTCHelper.dc);
+      /* console.log(WebRTCHelper.dc); */
+      WebRTCHelper.dc.send("fuck");
     });
   }
 
