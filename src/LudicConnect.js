@@ -5,8 +5,8 @@ import DB from './DB'
 class LudicConnect {
   constructor(){
     let lobbyId = "-KObw8tXYWT8YR1xnpBO";
-    this.joinLobby(lobbyId);
-    /* this.createLobby("senso"); */
+    /* this.joinLobby(lobbyId); */
+    this.createLobby("senso");
   }
 
   createLobby(name){
@@ -34,7 +34,7 @@ class LudicConnect {
           this.lobby.answer = JSON.stringify(answer);
           DB.stopWatchingLobby();
           DB.updateLobby(this.lobby);
-          WebRTCHelper.dc.send("fuck");
+          /* WebRTCHelper.dc.send("fuck"); */
         });
       });
     }
@@ -45,10 +45,12 @@ class LudicConnect {
     console.log("onLobbyUpdated");
     this.lobby = lobby;
     console.log(this.lobby);
-    WebRTCHelper.handleOffer(lobby.offer).then(result => {
-      /* console.log(WebRTCHelper.dc); */
-      WebRTCHelper.dc.send("fuck");
-    });
+    if(lobby.answer){
+      WebRTCHelper.handleOffer(lobby.answer).then(result => {
+        /* console.log(WebRTCHelper.dc); */
+        /* WebRTCHelper.dc.send("fuck"); */
+      });
+    }
   }
 
 }

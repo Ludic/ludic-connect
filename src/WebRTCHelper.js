@@ -59,24 +59,25 @@ class WebRTCHelper {
   /* Data Channel */
   initDataChannel(pc){
     let dc = pc.createDataChannel("master");
-    dc.onmessage = this.onMessage;
-    dc.onopen = this.onOpen;
-    dc.onclose = this.onClose;
+    dc.onmessage = this.onMessage.bind(this);
+    dc.onopen = this.onOpen.bind(this);
+    dc.onclose = this.onClose.bind(this);
     return dc;
   }
 
   onMessage(event){
-    console.log("Master.onMessage()");
+    console.log("WebRTCHelper.onMessage()");
     console.log(event);
   }
 
   onOpen(event){
-    console.log("Master.onOpen()");
+    console.log("WebRTCHelper.onOpen()");
     console.log(event);
+    this.dc.send("FUCK YOU DEREK");
   }
 
   onClose(event){
-    console.log("Master.onClose()");
+    console.log("WebRTCHelper.onClose()");
     console.log(event);
   }
 }
