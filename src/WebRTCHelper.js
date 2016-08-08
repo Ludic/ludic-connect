@@ -1,6 +1,4 @@
-import Notifications from '../services/NotificationService'
-
-class Master {
+class WebRTCHelper {
   constructor(){
     this.config = {
       'iceServers': [
@@ -14,7 +12,7 @@ class Master {
     };
 
     this.pc = new RTCPeerConnection(this.config, this.options);
-    this.dc = null;
+    this.dc = this.initDataChannel(this.pc);
     this.tn = null;
 
     this.sdpConstraints = {
@@ -24,49 +22,38 @@ class Master {
         OfferToReceiveVideo: true
       }
     };
+  }
 
-    this.pc.createOffer(this.options).then(offer => {
+  createOffer(){
+    return this.pc.createOffer(this.options).then(offer => {
       this.offer = offer;
       return this.pc.setLocalDescription(offer);
     }).then(() => {
-      let jsonOffer = JSON.stringify(this.pc.localDescription);
-      console.info(jsonOffer);
-      console.log(this.pc.localDescription);
-      window.offer = this.pc.localDescription;
-      this.dc = this.initDataChannel(this.pc);
-      /* probably send this somehow */
-      /* sendToServer({
-         name: myUsername,
-         target: targetUsername,
-         type: "video-offer",
-         sdp: myPeerConnection.localDescription
-         }); */
+      /* let jsonOffer = JSON.stringify(this.pc.localDescription); */
+      return this.pc.localDescription;
+      /* console.info(jsonOffer);
+         console.log(this.pc.localDescription); */
     }).catch(error => {
       console.error(error);
       return error;
     });
 
-    window.pc = this.pc;
-    window.handleOffer = this.handleOffer.bind(this);
   }
 
   createAnswer(){
-    this.pc.createAnswer(this.options).then(answerDesc => {
-      this.pc.setLocalDescription(answerDesc);
-      console.log(JSON.stringify(answerDesc));
-    }, error => {
+    return this.pc.createAnswer(this.options).then(answer => {
+      this.answer = answer;
+      return this.pc.setLocalDescription(answer);
+    }).then(answer => {
+      return this.answer;
+    }).catch(error => {
       console.error(error);
     });
   }
 
   handleOffer(jsonOffer){
-    if(typeof jsonOffer === "string"){
-      let offerDesc = new RTCSessionDescription(JSON.parse(jsonOffer));
-    } else {
-      let offerDesc = new RTCSessionDescription(jsonOffer);
-    }
-    this.pc.setRemoteDescription(offerDesc);
-    this.createAnswer();
+    let offerDesc = new RTCSessionDescription(JSON.parse(jsonOffer));
+    return this.pc.setRemoteDescription(offerDesc);
   }
 
   /* Data Channel */
@@ -94,4 +81,4 @@ class Master {
   }
 }
 
-export default new Master();
+export default new WebRTCHelper();
