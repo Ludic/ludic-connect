@@ -12,7 +12,10 @@ class WebRTCHelper {
     };
 
     this.pc = new RTCPeerConnection(this.config, this.options);
-    /* this.dc = this.initDataChannel(this.pc); */
+    this.pc.ondataChannel = this.onDataChannel.bind(this);
+
+    window.pc = this.pc;
+
     this.tn = null;
 
     this.sdpConstraints = {
@@ -56,6 +59,15 @@ class WebRTCHelper {
     return this.pc.setRemoteDescription(offerDesc);
   }
 
+  /* Peer Connection Events */
+  onDataChannel(event){
+    window.dc = event.channel;
+    console.log('Data channel is created!');
+    event.channel.onopen = function() {
+      console.log('Data channel is open and ready to be used.');
+    };
+  }
+
   /* Data Channel */
   initDataChannel(pc){
     let dc = pc.createDataChannel("master");
@@ -73,7 +85,6 @@ class WebRTCHelper {
   onOpen(event){
     console.log("WebRTCHelper.onOpen()");
     console.log(event);
-    this.dc.send("FUCK YOU DEREK");
   }
 
   onClose(event){

@@ -48,9 +48,7 @@ class LudicConnect {
     console.log(this.lobby);
     if(lobby.answer){
       WebRTCHelper.handleOffer(lobby.answer).then(result => {
-        console.log(WebRTCHelper.dc);
-        WebRTCHelper.initDataChannel(WebRTCHelper.pc);
-        WebRTCHelper.dc.send("fuck");
+        WebRTCHelper.dc =  WebRTCHelper.initDataChannel(WebRTCHelper.pc);
       });
     }
   }
