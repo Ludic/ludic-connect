@@ -34,6 +34,7 @@ class LudicConnect {
           this.lobby.answer = JSON.stringify(answer);
           DB.stopWatchingLobby();
           DB.updateLobby(this.lobby);
+          WebRTCHelper.initDataChannel(WebRTCHelper.pc);
           /* WebRTCHelper.dc.send("fuck"); */
         });
       });
@@ -47,8 +48,9 @@ class LudicConnect {
     console.log(this.lobby);
     if(lobby.answer){
       WebRTCHelper.handleOffer(lobby.answer).then(result => {
-        /* console.log(WebRTCHelper.dc); */
-        /* WebRTCHelper.dc.send("fuck"); */
+        console.log(WebRTCHelper.dc);
+        WebRTCHelper.initDataChannel(WebRTCHelper.pc);
+        WebRTCHelper.dc.send("fuck");
       });
     }
   }

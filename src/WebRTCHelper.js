@@ -12,7 +12,7 @@ class WebRTCHelper {
     };
 
     this.pc = new RTCPeerConnection(this.config, this.options);
-    this.dc = this.initDataChannel(this.pc);
+    /* this.dc = this.initDataChannel(this.pc); */
     this.tn = null;
 
     this.sdpConstraints = {
