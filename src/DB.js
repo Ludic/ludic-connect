@@ -41,7 +41,7 @@ class DB {
 
   watchLobby(id, cb){
     this.lobbyRef = firebase.database().ref('lobbies').orderByChild("id").equalTo(id);
-    this.lobbyRef.on('value', data => {
+    return this.lobbyRef.on('value', data => {
       let _data = data.val();
       for(var key in _data){
         let lb = _data[key];
