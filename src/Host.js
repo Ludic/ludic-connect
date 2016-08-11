@@ -36,8 +36,10 @@ class Host {
 
   setUpPeerConnection(){
     this.pc = new RTCPeerConnection(this.config, this.options);
-    this.pc.onicecandidate = this.onIceCanidate.bind(this);
+    /* this.pc = new RTCPeerConnection(null); */
+    this.pc.onicecandidate = this.onIceCandidate.bind(this);
     this.pc.oniceconnectionstatechange = this.onIceConnectionStateChange.bind(this);
+    this.pc.ondatachannel = this.onDataChannel.bind(this);
 
     return this.pc.createOffer(this.offerOptions).then(desc => {
       return this.pc.setLocalDescription(desc).then(() => {
@@ -52,19 +54,55 @@ class Host {
     });
   }
 
-  onIceCanidate(e){
-    /* Must send to Client, they must call pc.addIceCandidate(RTCIceCandidate)  */
+  setRemoteDescription(desc){
+    return this.pc.setRemoteDescription(desc).then(results => {
+      return results;
+    }, error => {
+      return Promise.reject(error);
+    });
+  }
+
+  createDataChannel(){
+    this.dc = this.pc.createDataChannel("master");
+    this.dc.onmessage = this.onMessage.bind(this);
+  }
+
+  addIceCandidate(iceCandidate){
+    console.log("adding ice candidate");
+    console.log(iceCandidate);
+    this.pc.addIceCandidate(iceCandidate);
+  }
+
+  /* Events */
+  onIceCandidate(e){
     if(e.candidate){
-      console.log("onIceCandidate: ", e);
       this.iceCandidate = new RTCIceCandidate(e.candidate);
     }
   }
 
   onIceConnectionStateChange(e){
     if(this.pc){
-      console.log(getName(this.pc) + ' ICE state: ' + this.pc.iceConnectionState);
+      console.log(' ICE state: ' + this.pc.iceConnectionState);
       console.log('ICE state change event: ', e);
     }
+  }
+
+  onMessage(e){
+    console.log("onMessage");
+    console.log(e);
+  }
+
+  onDataChannel(e){
+    console.log("onDataChannel");
+    console.log(e);
+  }
+
+  onOpen(){
+    console.log("onOpen");
+  }
+
+  onClose(){
+    console.log("onClose");
   }
 }
 

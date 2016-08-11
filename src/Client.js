@@ -36,10 +36,14 @@ class Client {
 
   setUpPeerConnection(){
     this.pc = new RTCPeerConnection(this.config, this.options);
+    /* this.pc = new RTCPeerConnection(null); */
     this.pc.onicecandidate = this.onIceCanidate.bind(this);
     this.pc.oniceconnectionstatechange = this.onIceConnectionStateChange.bind(this);
+    this.pc.ondatachannel = this.onDataChannel.bind(this);
+  }
 
-    return this.pc.createOffer(this.offerOptions).then(desc => {
+  createAnswer(){
+    return this.pc.createAnswer().then(desc => {
       return this.pc.setLocalDescription(desc).then(() => {
         return desc;
       }, error => {
@@ -52,27 +56,55 @@ class Client {
     });
   }
 
-  onIceCanidate(e){
-    /* Must send to Client, they must call pc.addIceCandidate(RTCIceCandidate)  */
-    if(e.candidate){
-      console.log("onIceCandidate: ", e);
-      this.iceCandidate = new RTCIceCandidate(e.candidate);
-    }
-  }
-
-  onIceConnectionStateChange(e){
-    if(this.pc){
-      console.log(getName(this.pc) + ' ICE state: ' + this.pc.iceConnectionState);
-      console.log('ICE state change event: ', e);
-    }
-  }
-
   setRemoteDescription(desc){
     return this.pc.setRemoteDescription(desc).then(results => {
       return results;
     }, error => {
       return Promise.reject(error);
     });
+  }
+
+  addIceCandidate(candidate){
+    this.pc.addIceCandidate(candidate);
+  }
+
+  createDataChannel(){
+    this.dc = this.pc.createDataChannel("master");
+    this.dc.onmessage = this.onMessage.bind(this);
+  }
+
+  /* Events */
+  onIceCanidate(e){
+    if(e.candidate){
+      this.iceCandidate = new RTCIceCandidate(e.candidate);
+      console.log("ICE CANDIDAT");
+      console.log(this.iceCandidate);
+    }
+  }
+
+  onIceConnectionStateChange(e){
+    if(this.pc){
+      console.log(' ICE state: ' + this.pc.iceConnectionState);
+      console.log('ICE state change event: ', e);
+    }
+  }
+
+  onMessage(e){
+    console.log("onMessage");
+    console.log(e);
+  }
+
+  onDataChannel(e){
+    console.log("onDataChannel");
+    console.log(e);
+  }
+
+  onOpen(){
+    console.log("onOpen");
+  }
+
+  onClose(){
+    console.log("onClose");
   }
 }
 

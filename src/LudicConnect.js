@@ -23,23 +23,13 @@ class LudicConnect {
 
   /* Create Lobby */
   createLobby(name){
-    return Host.getMedia().then(stream => {
-      this.stream = stream;
-      this.audioTracks = stream.getAudioTracks();
-      this.videoTracks = stream.getVideoTracks();
-
-      return Host.setUpPeerConnection().then(desc => {
-        /* Host.pc.addStream(this.stream);  // TODO REMOVE, not related to data */
-        console.log(desc);
-        return DB.createLobby("senso", JSON.stringify(desc)).then(lobby => {
-          console.log(lobby);
-          console.log(lobby.id);
-          return lobby;
-          /* MUST SEND desc to any client NOW */
-
-        }, error => {
-          return Promise.reject(error);
-        });
+    return Host.setUpPeerConnection().then(desc => {
+      return DB.createLobby("senso", JSON.stringify(desc)).then(lobby => {
+        this.lobby = lobby;
+        DB.watchLobby(lobby.id, this.onClientAnswer.bind(this));
+        console.log(Host.pc);
+        console.log(lobby.id);
+        return lobby;
       }, error => {
         return Promise.reject(error);
       });
@@ -48,41 +38,69 @@ class LudicConnect {
     });
   }
 
-  /* Join Lobby */
-  joinLobby(lobbyId){
-    this.currentLobbyId = lobbyId;
-    return Client.setUpPeerConnection().then(desc => {
-      /* Host.pc.addStream(this.stream);  // TODO REMOVE, not related to data */
-      return DB.watchLobby(lobbyId, this.onJoinedLobbyUpdated.bind(this));
-    }, error => {
-      return Promise.reject(error);
-    });
-  }
-
-
-  /* On Joined Lobby Updated */
-  onJoinedLobbyUpdated(lobby){
-    console.log("onJoinedLobbyUpdated()");
-    console.log(lobby);
-    let desc = new RTCSessionDescription(JSON.parse(lobby.offer));
-    Client.setRemoteDescription(desc).then(results => {
-      console.log(results);
-    }, error => {
-      return Promise.reject(error);
-    });
-  }
-
-  onLobbyUpdated(lobby){
-    console.log("onLobbyUpdated");
+  /* First Update from Client */
+  onClientAnswer(lobby){
     this.lobby = lobby;
-    console.log(this.lobby);
     if(lobby.answer){
-      WebRTCHelper.handleOffer(lobby.answer).then(result => {
-        console.log("init data channel");
-        WebRTCHelper.initDataChannel(WebRTCHelper.pc);
+      DB.stopWatchingLobby();
+      let desc = new RTCSessionDescription(JSON.parse(lobby.answer));
+      Host.setRemoteDescription(desc).then(result => {
+        this.lobby.hostIceCandidate = JSON.stringify(Host.iceCandidate);
+        Host.addIceCandidate(JSON.parse(lobby.clientIceCandidate));
+        DB.updateLobby(this.lobby);
+        console.log(Host.pc);
       });
     }
   }
+
+  /* Join Lobby */
+  joinLobby(lobbyId){
+    this.currentLobbyId = lobbyId;
+    Client.setUpPeerConnection();
+    DB.watchLobby(lobbyId, this.onHostOffer.bind(this));
+  }
+
+  /* On Host Offer To Client */
+  onHostOffer(lobby){
+    if(lobby.offer){
+      DB.stopWatchingLobby();
+      this.lobby = lobby;
+      console.log(this.lobby);
+      let desc = new RTCSessionDescription(JSON.parse(lobby.offer));
+      Client.setRemoteDescription(desc).then(() => {
+        Client.createAnswer().then(desc => {
+          this.lobby.answer = JSON.stringify(desc);
+          setTimeout(() => {
+            this.lobby.clientIceCandidate = JSON.stringify(Client.iceCandidate);
+            DB.watchLobby(this.lobby.id, this.onHostIceCandidate.bind(this));
+            DB.updateLobby(this.lobby).then(() => {
+
+            }, error => {
+              return Promise.reject(error);
+            });
+          }, 555)
+        }, error => {
+          return Promise.reject(error);
+        });
+      }, error => {
+        return Promise.reject(error);
+      });
+    }
+  }
+
+  onHostIceCandidate(lobby){
+    if(lobby.hostIceCandidate){
+      console.log("got host ice");
+      DB.stopWatchingLobby();
+      this.lobby = lobby;
+      Client.addIceCandidate(JSON.parse(lobby.hostIceCandidate));
+      Client.createDataChannel();
+      console.log(Client.pc);
+      console.log(Client.dc);
+    }
+
+  }
+
 
 }
 
