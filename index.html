@@ -17,6 +17,7 @@
     padding: 1rem;
     flex-basis: 100%;
     flex-wrap: wrap;
+    margin: 0px;
   }
 
   .buttons {
@@ -29,13 +30,12 @@
   }
   
   </style>
+
+  <script type="text/javascript" src="bundle.js"></script>
+  <!-- <script src="/dist/main.js"></script> -->
   
-  <body style="margin: 0px; overflow: hidden">
-    <script src="jspm_packages/system.js"></script>
-    <script src="config.js"></script>
-    <script>
-    System.import('src/main');
-    </script>
+  <body >
+
     <div class="buttons">
       <button id="createLobby">CreateLobby</button>
       <button id="findLobbies">FindLobbies</button>

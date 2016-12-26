@@ -76,16 +76,11 @@ class Host {
   }
 
   addIceCandidate(iceCandidate){
-    console.log("adding ice candidate");
-    console.log(iceCandidate);
     this.pc.addIceCandidate(iceCandidate);
   }
 
   onIceConnectionStateChange(e){
-    if(this.pc){
-      console.log(' ICE state: ' + this.pc.iceConnectionState);
-      console.log('ICE state change event: ', e);
-    }
+
   }
 
 

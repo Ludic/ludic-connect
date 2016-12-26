@@ -1,4 +1,4 @@
-import firebase from './firebase.js'
+import firebase from 'firebase'
 
 class DB {
   constructor(){
@@ -8,8 +8,8 @@ class DB {
       databaseURL: "https://ludic-connect.firebaseio.com",
       storageBucket: "ludic-connect.appspot.com",
     };
+    
     firebase.initializeApp(config);
-
     this.lobbies = [];
     this.currentLobby = {};
   }

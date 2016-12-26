@@ -1,4 +1,4 @@
-import WebRTCAdapter from './WebRTCAdapter.js'
+import WebRTCAdapter from 'adapterjs'
 import Host from './Host.js'
 import Client from './Client.js'
 import DB from './DB'
@@ -12,13 +12,6 @@ class LudicConnect {
     this.isHost = false;
   }
 
-  /* Find Lobbies */
-  findLobbies(name){
-    return DB.findLobbies(name).then(lobbies => {
-      return lobbies;
-    });
-  }
-
   /* Create a Lobby */
   createLobby(name){
     this.isHost = true;
@@ -30,15 +23,27 @@ class LudicConnect {
     });
   }
 
+  /* Find Lobbies */
+  findLobbies(name){
+    return DB.findLobbies(name).then(lobbies => {
+      return lobbies;
+    });
+  }
 
+  /* Join Lobby */
+  joinLobby(lobbyId){
+    this.currentLobbyId = lobbyId;
+    Client.setUpPeerConnection(this.onClientIceCandidate.bind(this));
+    DB.watchLobby(lobbyId, this.onHostOffer.bind(this));
+  }
+
+  // TODO move everything below into Host / Client 
   onHostIceCandidate(e){
     if(e.candidate == null) {
       let offer = JSON.stringify(Host.pc.localDescription);
       return DB.createLobby(this.lobbyName, offer).then(lobby => {
         this.lobby = lobby;
         DB.watchLobby(lobby.id, this.onClientAnswer.bind(this));
-        console.log(Host.pc);
-        console.log(lobby.id);
         return lobby;
       }, error => {
         return Promise.reject(error);
@@ -50,7 +55,7 @@ class LudicConnect {
   onClientAnswer(lobby){
     this.lobby = lobby;
     if(lobby.answer){
-      DB.stopWatchingLobby();
+      /* DB.stopWatchingLobby(); */
       let desc = new RTCSessionDescription(JSON.parse(lobby.answer));
       Host.setRemoteDescription(desc).then(result => {
 
@@ -58,12 +63,6 @@ class LudicConnect {
     }
   }
 
-  /* Join Lobby */
-  joinLobby(lobbyId){
-    this.currentLobbyId = lobbyId;
-    Client.setUpPeerConnection(this.onClientIceCandidate.bind(this));
-    DB.watchLobby(lobbyId, this.onHostOffer.bind(this));
-  }
 
   /* On Host Offer To Client */
   onHostOffer(lobby){
