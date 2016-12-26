@@ -1,7 +1,7 @@
 {
   "name": "ludic-connect",
   "version": "1.0.0",
-  "description": "Ludic extension - WebRTC based networking, for multiplayer",
+  "description": "A Ludic.js extension - WebRTC based networking, for multiplayer",
   "format": "es6",
   "main": "src/main.js",
   "scripts": {
