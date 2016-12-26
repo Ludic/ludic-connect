@@ -3,28 +3,38 @@ import Host from './Host.js'
 import Client from './Client.js'
 import DB from './DB'
 
+window.Host = Host;
+window.Client = Client;
+
 class LudicConnect {
   constructor(){
-    /* let lobbyId = "-KObw8tXYWT8YR1xnpBO"; */
-    /* this.joinLobby(lobbyId); */
-    /* this.createLobby("senso"); */
-    this.stream = null;
-    this.audioTracks = null;
-    this.videoTracks = null;
-    this.localVideo = document.getElementById('localVideo');
+    this.peers = [];
+    this.isHost = false;
   }
 
   /* Find Lobbies */
   findLobbies(name){
-    DB.findLobbies(name).then(lobbies => {
-      console.log(lobbies);
+    return DB.findLobbies(name).then(lobbies => {
+      return lobbies;
     });
   }
 
-  /* Create Lobby */
+  /* Create a Lobby */
   createLobby(name){
-    return Host.setUpPeerConnection().then(desc => {
-      return DB.createLobby("senso", JSON.stringify(desc)).then(lobby => {
+    this.isHost = true;
+    this.lobbyName = name;
+    return Host.setUpPeerConnection(this.onHostIceCandidate.bind(this)).then(desc => {
+      return desc;
+    }, error => {
+      return Promise.reject(error);
+    });
+  }
+
+
+  onHostIceCandidate(e){
+    if(e.candidate == null) {
+      let offer = JSON.stringify(Host.pc.localDescription);
+      return DB.createLobby(this.lobbyName, offer).then(lobby => {
         this.lobby = lobby;
         DB.watchLobby(lobby.id, this.onClientAnswer.bind(this));
         console.log(Host.pc);
@@ -33,9 +43,7 @@ class LudicConnect {
       }, error => {
         return Promise.reject(error);
       });
-    }, error => {
-      return Promise.reject(error);
-    });
+    }
   }
 
   /* First Update from Client */
@@ -45,10 +53,7 @@ class LudicConnect {
       DB.stopWatchingLobby();
       let desc = new RTCSessionDescription(JSON.parse(lobby.answer));
       Host.setRemoteDescription(desc).then(result => {
-        this.lobby.hostIceCandidate = JSON.stringify(Host.iceCandidate);
-        Host.addIceCandidate(JSON.parse(lobby.clientIceCandidate));
-        DB.updateLobby(this.lobby);
-        console.log(Host.pc);
+
       });
     }
   }
@@ -56,7 +61,7 @@ class LudicConnect {
   /* Join Lobby */
   joinLobby(lobbyId){
     this.currentLobbyId = lobbyId;
-    Client.setUpPeerConnection();
+    Client.setUpPeerConnection(this.onClientIceCandidate.bind(this));
     DB.watchLobby(lobbyId, this.onHostOffer.bind(this));
   }
 
@@ -67,18 +72,9 @@ class LudicConnect {
       this.lobby = lobby;
       console.log(this.lobby);
       let desc = new RTCSessionDescription(JSON.parse(lobby.offer));
-      Client.setRemoteDescription(desc).then(() => {
+      return Client.setRemoteDescription(desc).then(() => {
         Client.createAnswer().then(desc => {
-          this.lobby.answer = JSON.stringify(desc);
-          setTimeout(() => {
-            this.lobby.clientIceCandidate = JSON.stringify(Client.iceCandidate);
-            DB.watchLobby(this.lobby.id, this.onHostIceCandidate.bind(this));
-            DB.updateLobby(this.lobby).then(() => {
 
-            }, error => {
-              return Promise.reject(error);
-            });
-          }, 555)
         }, error => {
           return Promise.reject(error);
         });
@@ -88,20 +84,15 @@ class LudicConnect {
     }
   }
 
-  onHostIceCandidate(lobby){
-    if(lobby.hostIceCandidate){
-      console.log("got host ice");
-      DB.stopWatchingLobby();
-      this.lobby = lobby;
-      Client.addIceCandidate(JSON.parse(lobby.hostIceCandidate));
-      Client.createDataChannel();
-      console.log(Client.pc);
-      console.log(Client.dc);
+  onClientIceCandidate(e){
+    if(e.candidate == null) {
+      let answer = JSON.stringify(Client.pc.localDescription);
+      this.lobby.answer = answer;
+      /* this.lobby.clientIceCandidate = JSON.stringify(Client.iceCandidate); */
+      /* DB.watchLobby(this.lobby.id, this.onHostIceCandidate.bind(this)); */
+      DB.updateLobby(this.lobby);
     }
-
   }
-
-
 }
 
 export default new LudicConnect();

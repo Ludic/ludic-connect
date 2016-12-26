@@ -25,19 +25,9 @@ class Client {
     };
   }
 
-  getMedia(){
-    return navigator.mediaDevices.getUserMedia({audio: true, video: true}).then(stream => {
-      return stream;
-    }, error => {
-      console.error(error);
-      return Promise.reject(error);
-    });
-  }
-
-  setUpPeerConnection(){
+  setUpPeerConnection(onIceCandidate){
     this.pc = new RTCPeerConnection(this.config, this.options);
-    /* this.pc = new RTCPeerConnection(null); */
-    this.pc.onicecandidate = this.onIceCanidate.bind(this);
+    this.pc.onicecandidate = onIceCandidate;
     this.pc.oniceconnectionstatechange = this.onIceConnectionStateChange.bind(this);
     this.pc.ondatachannel = this.onDataChannel.bind(this);
   }
@@ -73,15 +63,6 @@ class Client {
     this.dc.onmessage = this.onMessage.bind(this);
   }
 
-  /* Events */
-  onIceCanidate(e){
-    if(e.candidate){
-      this.iceCandidate = new RTCIceCandidate(e.candidate);
-      console.log("ICE CANDIDAT");
-      console.log(this.iceCandidate);
-    }
-  }
-
   onIceConnectionStateChange(e){
     if(this.pc){
       console.log(' ICE state: ' + this.pc.iceConnectionState);
@@ -97,6 +78,8 @@ class Client {
   onDataChannel(e){
     console.log("onDataChannel");
     console.log(e);
+    this.dc = e.channel
+    this.dc.onmessage = this.onMessage.bind(this);
   }
 
   onOpen(){

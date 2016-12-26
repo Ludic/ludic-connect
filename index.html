@@ -3,26 +3,46 @@
     <title>Ludic Connect</title>
   </head>
 
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+
+  <style>
+  button {
+    width: 100px;
+    height: 50px;
+    background-color: azure;
+  }
+
+  body {
+    display: flex;
+    padding: 1rem;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+  }
+
+  .buttons {
+      display: flex;
+  }
+  
+  .lobbies {
+    display: flex;
+    flex-basis: 100%;
+  }
+  
+  </style>
+  
   <body style="margin: 0px; overflow: hidden">
     <script src="jspm_packages/system.js"></script>
     <script src="config.js"></script>
     <script>
-     System.import('src/main');
+    System.import('src/main');
     </script>
+    <div class="buttons">
+      <button id="createLobby">CreateLobby</button>
+      <button id="findLobbies">FindLobbies</button>
+    </div>
 
-
-      <video id="localVideo" autoplay muted></video>
-      <video id="remoteVideo" autoplay></video>
-
-
-
-      <div>
-        <button id="startButton">Start</button>
-        <button id="callButton">Call</button>
-        <button id="hangupButton">Hang Up</button>
-      </div>
-
-
+    <div class="lobies">
+      Lobbies: 
     </div>
   </body>
 </html>

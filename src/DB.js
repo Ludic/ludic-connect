@@ -9,6 +9,9 @@ class DB {
       storageBucket: "ludic-connect.appspot.com",
     };
     firebase.initializeApp(config);
+
+    this.lobbies = [];
+    this.currentLobby = {};
   }
 
   createLobby(name, jsonOffer){
@@ -18,6 +21,7 @@ class DB {
       id: newLobbyKey,
       created_at: now,
       updated_at: now,
+      name: name,
       offer: jsonOffer
     };
 
@@ -56,15 +60,13 @@ class DB {
   }
 
   findLobbies(name){
-    this.lobbiesRef = firebase.database().ref('lobbies').orderByChild("name").equalTo(name);
-    this.lobbiesRef.once('value', data => {
-      this.lobbies = [];
+    this.lobbiesRef = firebase.database().ref('lobbies').orderByChild("name").equalTo(name); 
+    return this.lobbiesRef.once('value').then(data => {
       let _data = data.val();
-      for(var key in _data){
-        let lb = _data[key];
-        this.lobbies.push(lb);
+      for(let key in _data){
+        this.lobbies.push(_data[key]);
       }
-      Notifications.notify("RouteModel.routesUpdated");
+      return this.lobbies;
     });
   }
 }

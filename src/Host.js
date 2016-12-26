@@ -3,7 +3,7 @@ class Host {
     this.config = {
       'iceServers': [
         {
-          'url': 'stun:stun.l.google.com:19302'
+          'url': 'stun:stun.l.google.com:19305'
         }
       ]
     };
@@ -25,22 +25,15 @@ class Host {
     };
   }
 
-  getMedia(){
-    return navigator.mediaDevices.getUserMedia({audio: true, video: true}).then(stream => {
-      return stream;
-    }, error => {
-      console.error(error);
-      return Promise.reject(error);
-    });
-  }
 
-  setUpPeerConnection(){
+  setUpPeerConnection(onIceCandidate){
     this.pc = new RTCPeerConnection(this.config, this.options);
-    /* this.pc = new RTCPeerConnection(null); */
-    this.pc.onicecandidate = this.onIceCandidate.bind(this);
+    this.pc.onicecandidate = onIceCandidate;
     this.pc.oniceconnectionstatechange = this.onIceConnectionStateChange.bind(this);
     this.pc.ondatachannel = this.onDataChannel.bind(this);
 
+    this.createDataChannel();
+    
     return this.pc.createOffer(this.offerOptions).then(desc => {
       return this.pc.setLocalDescription(desc).then(() => {
         return desc;
@@ -62,22 +55,30 @@ class Host {
     });
   }
 
+  /* Data Channel */
   createDataChannel(){
     this.dc = this.pc.createDataChannel("master");
-    this.dc.onmessage = this.onMessage.bind(this);
+    this.dc.onopen = this.onDataChannelOpen.bind(this);
+    this.dc.onclose = this.onDataChannelClose.bind(this);
+    this.dc.onmessage = this.onDataChannelMessage.bind(this);
+  }
+
+  onDataChannelOpen(e){
+    console.log("Host.onDataChannelOpen", e);
+  }
+
+  onDataChannelClose(e){
+    console.log("Host.onDataChannelClose", e);
+  }
+
+  onDataChannelMessage(e){
+    console.log("Host.onDataChannelMessage", e);
   }
 
   addIceCandidate(iceCandidate){
     console.log("adding ice candidate");
     console.log(iceCandidate);
     this.pc.addIceCandidate(iceCandidate);
-  }
-
-  /* Events */
-  onIceCandidate(e){
-    if(e.candidate){
-      this.iceCandidate = new RTCIceCandidate(e.candidate);
-    }
   }
 
   onIceConnectionStateChange(e){
@@ -87,10 +88,6 @@ class Host {
     }
   }
 
-  onMessage(e){
-    console.log("onMessage");
-    console.log(e);
-  }
 
   onDataChannel(e){
     console.log("onDataChannel");
