@@ -7,7 +7,7 @@
 
 #### jspm
 
-`jspm install ein=github:Ludic/ludic-connect`
+`jspm install lc=github:Ludic/ludic-connect`
 
 #### webpack
 

@@ -6,10 +6,11 @@ var path = require('path');
 var fs = require('fs');
 
 module.exports = {
-  entry: ["./src/main.js"],
+  entry: "./src/main.js",
   output: {
-    path: __dirname,
-    filename: "bundle.js"
+    libraryTarget: 'commonjs2',
+    path: __dirname + '/dist',
+    filename: "main.js"
   },
   module: {
     loaders: [
