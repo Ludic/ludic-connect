@@ -1,4 +1,6 @@
+import WebRTCAdapter from 'adapterjs'
 import LudicConnect from './LudicConnect'
-window.ludicConnnect = LudicConnect;
+export {LudicConnect as LudicConnect, LudicConnect as default}
+
 
 

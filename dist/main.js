@@ -137,11 +137,8 @@ module.exports = g;
 /***/ function(module, exports, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_adapterjs__ = __webpack_require__(3);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_adapterjs___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_adapterjs__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Host_js__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__Client_js__ = __webpack_require__(4);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__DB__ = __webpack_require__(5);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__Host_js__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Client_js__ = __webpack_require__(4);
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -149,115 +146,60 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 
 
-
-
-window.Host = __WEBPACK_IMPORTED_MODULE_1__Host_js__["a" /* default */];
-window.Client = __WEBPACK_IMPORTED_MODULE_2__Client_js__["a" /* default */];
-
 var LudicConnect = function () {
   function LudicConnect() {
     _classCallCheck(this, LudicConnect);
 
     this.peers = [];
     this.isHost = false;
+    this.Host = __WEBPACK_IMPORTED_MODULE_0__Host_js__["a" /* default */];
+    this.Client = __WEBPACK_IMPORTED_MODULE_1__Client_js__["a" /* default */];
   }
-
-  /* Create a Lobby */
-
 
   _createClass(LudicConnect, [{
     key: 'createLobby',
-    value: function createLobby(name) {
+    value: function createLobby(lobbyName) {
       this.isHost = true;
-      this.lobbyName = name;
-      return __WEBPACK_IMPORTED_MODULE_1__Host_js__["a" /* default */].setUpPeerConnection(this.onHostIceCandidate.bind(this)).then(function (desc) {
+      return __WEBPACK_IMPORTED_MODULE_0__Host_js__["a" /* default */].setUpPeerConnection(lobbyName, this.onMessage.bind(this)).then(function (desc) {
         return desc;
       }, function (error) {
         return Promise.reject(error);
       });
     }
-
-    /* Find Lobbies */
-
   }, {
     key: 'findLobbies',
     value: function findLobbies(name) {
-      return __WEBPACK_IMPORTED_MODULE_3__DB__["a" /* default */].findLobbies(name).then(function (lobbies) {
+      return DB.findLobbies(name).then(function (lobbies) {
         return lobbies;
       });
     }
-
-    /* Join Lobby */
-
   }, {
     key: 'joinLobby',
     value: function joinLobby(lobbyId) {
-      this.currentLobbyId = lobbyId;
-      __WEBPACK_IMPORTED_MODULE_2__Client_js__["a" /* default */].setUpPeerConnection(this.onClientIceCandidate.bind(this));
-      __WEBPACK_IMPORTED_MODULE_3__DB__["a" /* default */].watchLobby(lobbyId, this.onHostOffer.bind(this));
+      this.isHost = false;
+      __WEBPACK_IMPORTED_MODULE_1__Client_js__["a" /* default */].setUpPeerConnection(lobbyId, this.onMessage.bind(this));
     }
-
-    // TODO move everything below into Host / Client 
-
   }, {
-    key: 'onHostIceCandidate',
-    value: function onHostIceCandidate(e) {
-      var _this = this;
-
-      if (e.candidate == null) {
-        var offer = JSON.stringify(__WEBPACK_IMPORTED_MODULE_1__Host_js__["a" /* default */].pc.localDescription);
-        return __WEBPACK_IMPORTED_MODULE_3__DB__["a" /* default */].createLobby(this.lobbyName, offer).then(function (lobby) {
-          _this.lobby = lobby;
-          __WEBPACK_IMPORTED_MODULE_3__DB__["a" /* default */].watchLobby(lobby.id, _this.onClientAnswer.bind(_this));
-          return lobby;
-        }, function (error) {
-          return Promise.reject(error);
-        });
-      }
-    }
-
-    /* First Update from Client */
-
-  }, {
-    key: 'onClientAnswer',
-    value: function onClientAnswer(lobby) {
-      this.lobby = lobby;
-      if (lobby.answer) {
-        /* DB.stopWatchingLobby(); */
-        var desc = new RTCSessionDescription(JSON.parse(lobby.answer));
-        __WEBPACK_IMPORTED_MODULE_1__Host_js__["a" /* default */].setRemoteDescription(desc).then(function (result) {});
-      }
-    }
-
-    /* On Host Offer To Client */
-
-  }, {
-    key: 'onHostOffer',
-    value: function onHostOffer(lobby) {
-      if (lobby.offer) {
-        __WEBPACK_IMPORTED_MODULE_3__DB__["a" /* default */].stopWatchingLobby();
-        this.lobby = lobby;
-        console.log(this.lobby);
-        var desc = new RTCSessionDescription(JSON.parse(lobby.offer));
-        return __WEBPACK_IMPORTED_MODULE_2__Client_js__["a" /* default */].setRemoteDescription(desc).then(function () {
-          __WEBPACK_IMPORTED_MODULE_2__Client_js__["a" /* default */].createAnswer().then(function (desc) {}, function (error) {
-            return Promise.reject(error);
-          });
-        }, function (error) {
-          return Promise.reject(error);
-        });
+    key: 'send',
+    value: function send(data) {
+      if (this.isHost) {
+        if (__WEBPACK_IMPORTED_MODULE_0__Host_js__["a" /* default */].dc.readyState === 'open') {
+          __WEBPACK_IMPORTED_MODULE_0__Host_js__["a" /* default */].dc.send(data);
+        } else {
+          console.error("Host Data Channel not Open");
+        }
+      } else {
+        if (__WEBPACK_IMPORTED_MODULE_1__Client_js__["a" /* default */].dc.readyState === 'open') {
+          __WEBPACK_IMPORTED_MODULE_1__Client_js__["a" /* default */].dc.send(data);
+        } else {
+          console.error("Client Data Channel not Open");
+        }
       }
     }
   }, {
-    key: 'onClientIceCandidate',
-    value: function onClientIceCandidate(e) {
-      if (e.candidate == null) {
-        var answer = JSON.stringify(__WEBPACK_IMPORTED_MODULE_2__Client_js__["a" /* default */].pc.localDescription);
-        this.lobby.answer = answer;
-        /* this.lobby.clientIceCandidate = JSON.stringify(Client.iceCandidate); */
-        /* DB.watchLobby(this.lobby.id, this.onHostIceCandidate.bind(this)); */
-        __WEBPACK_IMPORTED_MODULE_3__DB__["a" /* default */].updateLobby(this.lobby);
-      }
+    key: 'onMessage',
+    value: function onMessage() {
+      /* overide  */
     }
   }]);
 
@@ -280,9 +222,12 @@ void 0!==offerOptions.offerToReceiveVideo&&(numVideoTracks=offerOptions.offerToR
 /***/ function(module, exports, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__DB__ = __webpack_require__(5);
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+
 
 var Client = function () {
   function Client() {
@@ -290,42 +235,63 @@ var Client = function () {
 
     this.config = {
       'iceServers': [{
-        'url': 'stun:stun.l.google.com:19302'
+        'url': 'stun:stun.l.google.com:19305'
       }]
     };
     this.options = {
       'optional': [{ 'DtlsSrtpKeyAgreement': true }]
     };
 
-    this.offerOptions = {
-      offerToReceiveAudio: 1,
-      offerToReceiveVideo: 1
-    };
-
-    this.sdpConstraints = {
-      optional: [],
-      mandatory: {
-        OfferToReceiveAudio: true,
-        OfferToReceiveVideo: true
-      }
-    };
+    this.pc = null;
+    this.dc = null;
+    this.onMessage = null;
   }
 
   _createClass(Client, [{
     key: 'setUpPeerConnection',
-    value: function setUpPeerConnection(onIceCandidate) {
+    value: function setUpPeerConnection(lobbyId, onMessage) {
+      this.onMessage = onMessage;
       this.pc = new RTCPeerConnection(this.config, this.options);
-      this.pc.onicecandidate = onIceCandidate;
+      this.pc.onicecandidate = this.onIceCandidate.bind(this);
       this.pc.oniceconnectionstatechange = this.onIceConnectionStateChange.bind(this);
       this.pc.ondatachannel = this.onDataChannel.bind(this);
+      __WEBPACK_IMPORTED_MODULE_0__DB__["a" /* default */].watchLobby(lobbyId, this.onHostOffer.bind(this));
+    }
+  }, {
+    key: 'onIceCandidate',
+    value: function onIceCandidate(e) {
+      if (e.candidate == null) {
+        var answer = JSON.stringify(this.pc.localDescription);
+        this.lobby.answer = answer;
+        __WEBPACK_IMPORTED_MODULE_0__DB__["a" /* default */].updateLobby(this.lobby);
+      }
+    }
+  }, {
+    key: 'onHostOffer',
+    value: function onHostOffer(lobby) {
+      var _this = this;
+
+      if (lobby.offer) {
+        __WEBPACK_IMPORTED_MODULE_0__DB__["a" /* default */].stopWatchingLobby();
+        this.lobby = lobby;
+        console.log(this.lobby);
+        var desc = new RTCSessionDescription(JSON.parse(lobby.offer));
+        return this.setRemoteDescription(desc).then(function () {
+          _this.createAnswer().then(function (desc) {}, function (error) {
+            return Promise.reject(error);
+          });
+        }, function (error) {
+          return Promise.reject(error);
+        });
+      }
     }
   }, {
     key: 'createAnswer',
     value: function createAnswer() {
-      var _this = this;
+      var _this2 = this;
 
       return this.pc.createAnswer().then(function (desc) {
-        return _this.pc.setLocalDescription(desc).then(function () {
+        return _this2.pc.setLocalDescription(desc).then(function () {
           return desc;
         }, function (error) {
           console.error(error);
@@ -351,12 +317,6 @@ var Client = function () {
       this.pc.addIceCandidate(candidate);
     }
   }, {
-    key: 'createDataChannel',
-    value: function createDataChannel() {
-      this.dc = this.pc.createDataChannel("master");
-      this.dc.onmessage = this.onMessage.bind(this);
-    }
-  }, {
     key: 'onIceConnectionStateChange',
     value: function onIceConnectionStateChange(e) {
       if (this.pc) {
@@ -364,12 +324,12 @@ var Client = function () {
         console.log('ICE state change event: ', e);
       }
     }
-  }, {
-    key: 'onMessage',
-    value: function onMessage(e) {
-      console.log("onMessage");
-      console.log(e);
-    }
+
+    /* onMessage(e){
+       console.log("onMessage");
+       console.log(e);
+       } */
+
   }, {
     key: 'onDataChannel',
     value: function onDataChannel(e) {
@@ -499,9 +459,12 @@ var DB = function () {
 /***/ function(module, exports, __webpack_require__) {
 
 "use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__DB__ = __webpack_require__(5);
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+
 
 var Host = function () {
   function Host() {
@@ -516,31 +479,23 @@ var Host = function () {
       'optional': [{ 'DtlsSrtpKeyAgreement': true }]
     };
 
-    this.offerOptions = {
-      offerToReceiveAudio: 1,
-      offerToReceiveVideo: 1
-    };
-
-    this.sdpConstraints = {
-      optional: [],
-      mandatory: {
-        OfferToReceiveAudio: true,
-        OfferToReceiveVideo: true
-      }
-    };
+    this.pc = null;
+    this.dc = null;
+    this.lobbyName = null;
   }
 
   _createClass(Host, [{
     key: 'setUpPeerConnection',
-    value: function setUpPeerConnection(onIceCandidate) {
+    value: function setUpPeerConnection(lobbyName, onMessage) {
       var _this = this;
 
+      this.lobbyName = lobbyName;
       this.pc = new RTCPeerConnection(this.config, this.options);
-      this.pc.onicecandidate = onIceCandidate;
+      this.pc.onicecandidate = this.onIceCandidate.bind(this);
       this.pc.oniceconnectionstatechange = this.onIceConnectionStateChange.bind(this);
       this.pc.ondatachannel = this.onDataChannel.bind(this);
 
-      this.createDataChannel();
+      this.createDataChannel(onMessage);
 
       return this.pc.createOffer(this.offerOptions).then(function (desc) {
         return _this.pc.setLocalDescription(desc).then(function () {
@@ -553,6 +508,35 @@ var Host = function () {
         console.error(error);
         return Promise.reject(error);
       });
+    }
+  }, {
+    key: 'onIceCandidate',
+    value: function onIceCandidate(e) {
+      var _this2 = this;
+
+      if (e.candidate == null) {
+        var offer = JSON.stringify(this.pc.localDescription);
+        return __WEBPACK_IMPORTED_MODULE_0__DB__["a" /* default */].createLobby(this.lobbyName, offer).then(function (lobby) {
+          _this2.lobby = lobby;
+          __WEBPACK_IMPORTED_MODULE_0__DB__["a" /* default */].watchLobby(lobby.id, _this2.onClientAnswer.bind(_this2));
+          return lobby;
+        }, function (error) {
+          return Promise.reject(error);
+        });
+      }
+    }
+
+    /* First Update from Client */
+
+  }, {
+    key: 'onClientAnswer',
+    value: function onClientAnswer(lobby) {
+      this.lobby = lobby;
+      if (lobby.answer) {
+        /* DB.stopWatchingLobby(); */
+        var desc = new RTCSessionDescription(JSON.parse(lobby.answer));
+        this.setRemoteDescription(desc).then(function (result) {});
+      }
     }
   }, {
     key: 'setRemoteDescription',
@@ -568,11 +552,11 @@ var Host = function () {
 
   }, {
     key: 'createDataChannel',
-    value: function createDataChannel() {
+    value: function createDataChannel(onMessage) {
       this.dc = this.pc.createDataChannel("master");
       this.dc.onopen = this.onDataChannelOpen.bind(this);
       this.dc.onclose = this.onDataChannelClose.bind(this);
-      this.dc.onmessage = this.onDataChannelMessage.bind(this);
+      this.dc.onmessage = onMessage;
     }
   }, {
     key: 'onDataChannelOpen',
@@ -1266,9 +1250,14 @@ module.exports = firebase.storage;
 
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__LudicConnect__ = __webpack_require__(2);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_adapterjs__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_adapterjs___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_adapterjs__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__LudicConnect__ = __webpack_require__(2);
+/* harmony reexport (binding) */ __webpack_require__.d(exports, "LudicConnect", function() { return __WEBPACK_IMPORTED_MODULE_1__LudicConnect__["a"]; });
+/* harmony reexport (binding) */ __webpack_require__.d(exports, "default", function() { return __WEBPACK_IMPORTED_MODULE_1__LudicConnect__["a"]; });
 
-window.ludicConnnect = __WEBPACK_IMPORTED_MODULE_0__LudicConnect__["a" /* default */];
+
+
 
 /***/ }
 /******/ ]);
