@@ -1,5 +1,6 @@
 import Host from './Host.js'
 import Client from './Client.js'
+import DB from './DB.js'
 
 class LudicConnect {
   constructor(){
@@ -24,9 +25,9 @@ class LudicConnect {
     });
   }
 
-  joinLobby(lobbyId){
+  joinLobby(lobbyId, cb){
     this.isHost = false;
-    Client.setUpPeerConnection(lobbyId, this.onMessage.bind(this));
+    Client.setUpPeerConnection(lobbyId, this.onMessage.bind(this), cb);
   }
 
   send(data){
@@ -45,8 +46,14 @@ class LudicConnect {
     }
   }
 
+  /* Events */
+  
   onMessage(){
     /* overide  */
+  }
+
+  onPeerJoined(){
+    
   }
 }
 

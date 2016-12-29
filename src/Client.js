@@ -18,7 +18,8 @@ class Client {
     this.onMessage = null;
   }
 
-  setUpPeerConnection(lobbyId, onMessage){
+  setUpPeerConnection(lobbyId, onMessage, cb){
+    this.cb = cb;
     this.onMessage = onMessage;
     this.pc = new RTCPeerConnection(this.config, this.options);
     this.pc.onicecandidate = this.onIceCandidate.bind(this);
@@ -96,6 +97,7 @@ class Client {
     console.log(e);
     this.dc = e.channel
     this.dc.onmessage = this.onMessage.bind(this);
+    this.cb();
   }
 
   onOpen(){

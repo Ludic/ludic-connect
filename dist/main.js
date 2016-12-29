@@ -139,9 +139,11 @@ module.exports = g;
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__Host_js__ = __webpack_require__(6);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Client_js__ = __webpack_require__(4);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__DB_js__ = __webpack_require__(5);
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 
 
 
@@ -169,15 +171,15 @@ var LudicConnect = function () {
   }, {
     key: 'findLobbies',
     value: function findLobbies(name) {
-      return DB.findLobbies(name).then(function (lobbies) {
+      return __WEBPACK_IMPORTED_MODULE_2__DB_js__["a" /* default */].findLobbies(name).then(function (lobbies) {
         return lobbies;
       });
     }
   }, {
     key: 'joinLobby',
-    value: function joinLobby(lobbyId) {
+    value: function joinLobby(lobbyId, cb) {
       this.isHost = false;
-      __WEBPACK_IMPORTED_MODULE_1__Client_js__["a" /* default */].setUpPeerConnection(lobbyId, this.onMessage.bind(this));
+      __WEBPACK_IMPORTED_MODULE_1__Client_js__["a" /* default */].setUpPeerConnection(lobbyId, this.onMessage.bind(this), cb);
     }
   }, {
     key: 'send',
@@ -196,11 +198,17 @@ var LudicConnect = function () {
         }
       }
     }
+
+    /* Events */
+
   }, {
     key: 'onMessage',
     value: function onMessage() {
       /* overide  */
     }
+  }, {
+    key: 'onPeerJoined',
+    value: function onPeerJoined() {}
   }]);
 
   return LudicConnect;
@@ -249,7 +257,8 @@ var Client = function () {
 
   _createClass(Client, [{
     key: 'setUpPeerConnection',
-    value: function setUpPeerConnection(lobbyId, onMessage) {
+    value: function setUpPeerConnection(lobbyId, onMessage, cb) {
+      this.cb = cb;
       this.onMessage = onMessage;
       this.pc = new RTCPeerConnection(this.config, this.options);
       this.pc.onicecandidate = this.onIceCandidate.bind(this);
@@ -337,6 +346,7 @@ var Client = function () {
       console.log(e);
       this.dc = e.channel;
       this.dc.onmessage = this.onMessage.bind(this);
+      this.cb();
     }
   }, {
     key: 'onOpen',
