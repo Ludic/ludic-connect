@@ -15,7 +15,54 @@ class Host {
 
     this.pc = null;
     this.dc = null;
-    this.lobbyName = null;
+    this.lobby = null;
+    this.connectedPeers = [];
+  }
+
+  createLobby(name, type="peer"){
+    return DB.createLobby(name, type).then(lobby => {
+      this.lobby = lobby;
+      return lobby;
+    }, error => {
+      return Promise.reject(error);
+    });
+  }
+
+  joinLobby(lobbyId){
+    return DB.joinLobby(lobbyId).then(peer => {
+      this.peer = peer;
+      DB.watchPeers(lobbyId, this.onPeersUpdated.bind(this));
+      return lobby;
+    });
+  }
+  
+  onPeersUpdated(oldPeers, currentPeers){
+    console.log("Host.onPeersUpdated");
+    console.log("oldPeers: ", oldPeers);
+    console.log("currentPeers: ", currentPeers);
+
+    /* A Peer has Left */
+    if(oldPeers.length > currentPeers.length){
+      this.onPeerRemoved();
+    }
+
+    /* A Peer has Joined */
+    if(oldPeers.length < currentPeers.length){
+      this.onPeerJoined();
+    }
+
+    /* The State of a Peer has Changed */
+    //TODO
+    
+  }
+
+  
+  onPeerRemoved(){
+    console.log("onPeerRemoved()");
+  }
+
+  onPeerJoined(){
+    console.log("onPeerJoined()");
   }
 
 

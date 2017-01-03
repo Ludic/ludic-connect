@@ -11,10 +11,13 @@ class DB {
     
     firebase.initializeApp(config);
     this.lobbies = [];
-    this.currentLobby = {};
+    this.lobby = null;
+    this.oldLobby = null;
+    this.oldPeers = null;
+    this.peers = [];
   }
 
-  createLobby(name, jsonOffer){
+  createLobby(name, type){
     let newLobbyKey = firebase.database().ref().child('lobbies').push().key;
     let now = new Date().getTime();
     let lobby = {
@@ -22,7 +25,7 @@ class DB {
       created_at: now,
       updated_at: now,
       name: name,
-      offer: jsonOffer
+      type: type
     };
 
     var updates = {};
@@ -46,12 +49,13 @@ class DB {
   watchLobby(id, cb){
     this.lobbyRef = firebase.database().ref('lobbies').orderByChild("id").equalTo(id);
     return this.lobbyRef.on('value', data => {
+      this.oldLobby = this.lobby;
       let _data = data.val();
       for(var key in _data){
         let lb = _data[key];
         this.lobby = lb;
       }
-      cb(this.lobby);
+      cb(this.oldLobby, this.lobby);
     });
   }
 
@@ -67,6 +71,44 @@ class DB {
         this.lobbies.push(_data[key]);
       }
       return this.lobbies;
+    });
+  }
+
+  joinLobby(lobbyId, peer){
+    let newPeerKey = firebase.database().ref().child('peers').push().key;
+    let now = new Date().getTime();
+    let data = {
+      id: newPeerKey,
+      lobby_id: lobbyId,
+      connections: peer.connections,
+      created_at: now,
+      updated_at: now,
+    };
+    console.log(lobbyId);
+    var updates = {};
+    updates['/lobbies/' + lobbyId + '/peers/' + newPeerKey] = data;
+    return firebase.database().ref().update(updates).then(() => {
+      return peer;
+    });
+  }
+
+  updatePeer(peer){
+    var updates = {};
+    updates['/peers/' + peer.id] = peer;
+    return firebase.database().ref().update(updates);
+  }
+
+  watchPeers(lobbyId, cb){
+    this.peerRef = firebase.database().ref('peers').orderByChild("lobby_id").equalTo(lobbyId);
+    return this.peerRef.on('value', data => {
+      this.oldPeers = this.peers;
+      this.peers = [];
+      let _data = data.val();
+      for(let key in _data){
+        this.peers.push(_data[key]);
+      }
+      cb(this.oldPeers, this.peers);
+      return this.peers;
     });
   }
 }
