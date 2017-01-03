@@ -240,11 +240,10 @@ var DB = function () {
         created_at: now,
         updated_at: now
       };
-      console.log(lobbyId);
       var updates = {};
       updates['/lobbies/' + lobbyId + '/peers/' + newPeerKey] = data;
       return __WEBPACK_IMPORTED_MODULE_0_firebase___default.a.database().ref().update(updates).then(function () {
-        return peer;
+        return data;
       });
     }
   }, {
@@ -296,6 +295,8 @@ void 0!==offerOptions.offerToReceiveVideo&&(numVideoTracks=offerOptions.offerToR
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__Client_js__ = __webpack_require__(5);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__Peer_js__ = __webpack_require__(7);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__DB_js__ = __webpack_require__(2);
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -327,6 +328,7 @@ var LudicConnect = function () {
       return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].createLobby(name, type).then(function (lobby) {
         _this.lobby = lobby;
         return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].joinLobby(lobby.id, _this.peer).then(function (peer) {
+          console.log(peer);
           _this.peer.id = peer.id;
           _this.peer.created_at = peer.created_at;
           __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].watchLobby(lobby.id, _this.onLobbyUpdated.bind(_this));
@@ -408,56 +410,74 @@ var LudicConnect = function () {
   }, {
     key: 'onLobbyUpdated',
     value: function onLobbyUpdated(oldLobby, currentLobby) {
-      console.log("onLobbyUpdated");
-      console.log("oldLobby: ", oldLobby);
-      console.log("currentLobby: ", currentLobby);
+      var _this3 = this;
+
+      /* console.log("onLobbyUpdated");
+         console.log("oldLobby: ", oldLobby);
+         console.log("currentLobby: ", currentLobby); */
 
       if (this.init) {
-        var oldPeers = oldLobby.peers;
-        var currentPeers = currentLobby.peers;
-
-        if (oldPeers.length > currentPeers.length) {
-          return this.onPeerRemoved();
-        }
-
-        if (oldPeers.length < currentPeers.length) {
-          if (this.peer.id != currentPeers[currentPeers.length - 1].id) {
-            return this.onPeerJoined(currentPeers[currentPeers.length - 1]);
-          } else {
-
-            return;
+        var _ret2 = function () {
+          var oldPeers = [];
+          for (var key in oldLobby.peers) {
+            oldPeers.push(oldLobby.peers[key]);
           }
-        }
 
-        /* let diffPeer = null;
-           let diff = {};
-           oldPeers.forEach(oldPeer => {
-           currentPeers.forEach(currentPeer => {
-           if((oldPeer.id === currentPeer.id) && (oldPeer != currentPeer) && (this.peer.id != currentPeer.id)){
-           diffPeer = currentPeer;
-           for(let key in currentPeer){
-           if(key != 'updated_at'){
-           if(currentPeer[key] != oldPeer[key]){
-           diff[key] = currentPeer[key];
-           }
-           }
-           }
-           }
-           });
-           });
-             if(diff.connections){
-           diff.connections.forEach(connection => {
-           if(connection.for === this.peer.id){
-           if(connection.offer){
-           this.handleOffer(diffPeer, connection.offer);
-           } else if(connection.answer){
-           this.handleAnswer(diffPeer, connection.answer);
-           }
-           }
-           });
-           } else {
-           
-           } */
+          var currentPeers = [];
+          for (var _key in currentLobby.peers) {
+            currentPeers.push(currentLobby.peers[_key]);
+          }
+
+          if (oldPeers.length > currentPeers.length) {
+            return {
+              v: _this3.onPeerRemoved()
+            };
+          }
+
+          if (oldPeers.length < currentPeers.length) {
+            if (_this3.peer.id != currentPeers[currentPeers.length - 1].id) {
+              return {
+                v: _this3.onPeerJoined(currentPeers[currentPeers.length - 1])
+              };
+            } else {
+
+              return {
+                v: void 0
+              };
+            }
+          }
+
+          var diffPeer = null;
+          var diff = {};
+          oldPeers.forEach(function (oldPeer) {
+            currentPeers.forEach(function (currentPeer) {
+              if (oldPeer.id === currentPeer.id && oldPeer != currentPeer && _this3.peer.id != currentPeer.id) {
+                console.log("found a diff peer");
+                console.log(_this3.peer);
+                console.log(oldPeer);
+                console.log(currentPeer);
+                diffPeer = currentPeer;
+              }
+            });
+          });
+
+          console.log("diffPeer: ", diffPeer);
+          /* if(diff.connections){
+             diff.connections.forEach(connection => {
+             if(connection.for === this.peer.id){
+             if(connection.offer){
+             this.handleOffer(diffPeer, connection.offer);
+             } else if(connection.answer){
+             this.handleAnswer(diffPeer, connection.answer);
+             }
+             }
+             });
+             } else {
+             
+             } */
+        }();
+
+        if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
       } else {
         this.init = true;
       }
@@ -470,17 +490,34 @@ var LudicConnect = function () {
   }, {
     key: 'onPeerJoined',
     value: function onPeerJoined(peer) {
-      if (this.peer.created_at < peer.created_at) {
-        __WEBPACK_IMPORTED_MODULE_2__Peer_js__["a" /* default */].setUpPeerConnection(peer).then(function (results) {
-          console.log(results);
-        });
-      }
+      var _this4 = this;
+
+      peer.connections.forEach(function (connection) {
+        if (connection.to === _this4.peer.id) {
+          var peerPromise = new Promise(function (resolve, reject) {
+            var newPeer = new __WEBPACK_IMPORTED_MODULE_2__Peer_js__["a" /* default */](peer.id, peer.name, function (e) {
+              if (e.candidate == null) {
+                var offer = JSON.stringify(newPeer.pc.localDescription);
+                newPeer.offer = offer;
+                this.peers.push(newPeer);
+                resolve(offer);
+              }
+            }.bind(this));
+          }.bind(_this4));
+          Promise.all([peerPromise]).then(function (offer) {
+            console.log("offer");
+            console.log(offer);
+            _this4.handleOffer(_this4.peers[_this4.peers.length - 1], connection.offer);
+          });
+        }
+      });
     }
   }, {
     key: 'handleOffer',
     value: function handleOffer(peer, offer) {
       console.log("Handle Offer");
       console.log(offer);
+      peer.handleOffer(offer);
     }
   }, {
     key: 'handleAnswer',
@@ -960,7 +997,7 @@ var Peer = function () {
     }
   }, {
     key: 'handleOffer',
-    value: function handleOffer(peer, offer) {
+    value: function handleOffer(offer) {
       var _this2 = this;
 
       var desc = new RTCSessionDescription(JSON.parse(offer));

@@ -53,7 +53,7 @@ class Peer {
     }
   }
 
-  handleOffer(peer, offer){
+  handleOffer(offer){
     let desc = new RTCSessionDescription(JSON.parse(offer));
     return this.pc.setRemoteDescription(desc).then(results => {
       this.createAnswer().then(desc => {

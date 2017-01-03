@@ -84,11 +84,10 @@ class DB {
       created_at: now,
       updated_at: now,
     };
-    console.log(lobbyId);
     var updates = {};
     updates['/lobbies/' + lobbyId + '/peers/' + newPeerKey] = data;
     return firebase.database().ref().update(updates).then(() => {
-      return peer;
+      return data;
     });
   }
 

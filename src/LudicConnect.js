@@ -17,6 +17,7 @@ class LudicConnect {
     return DB.createLobby(name, type).then(lobby => {
       this.lobby = lobby;
       return DB.joinLobby(lobby.id, this.peer).then(peer => {
+        console.log(peer);
         this.peer.id = peer.id;
         this.peer.created_at = peer.created_at;
         DB.watchLobby(lobby.id, this.onLobbyUpdated.bind(this));
@@ -84,18 +85,24 @@ class LudicConnect {
 
   /* Events */
   onLobbyUpdated(oldLobby, currentLobby){
-    console.log("onLobbyUpdated");
-    console.log("oldLobby: ", oldLobby);
-    console.log("currentLobby: ", currentLobby);
+    /* console.log("onLobbyUpdated");
+       console.log("oldLobby: ", oldLobby);
+       console.log("currentLobby: ", currentLobby); */
 
     if(this.init){
-      let oldPeers = oldLobby.peers;
-      let currentPeers = currentLobby.peers;
+      let oldPeers = [];
+      for(let key in oldLobby.peers){
+        oldPeers.push(oldLobby.peers[key]);
+      }
+
+      let currentPeers = [];
+      for(let key in currentLobby.peers){
+        currentPeers.push(currentLobby.peers[key]);
+      }
 
       if(oldPeers.length > currentPeers.length){
         return this.onPeerRemoved();
       }
-
 
       if(oldPeers.length < currentPeers.length){
         if(this.peer.id != currentPeers[currentPeers.length - 1].id){
@@ -106,25 +113,22 @@ class LudicConnect {
         }
       }
 
-      /* let diffPeer = null;
-         let diff = {};
-         oldPeers.forEach(oldPeer => {
-         currentPeers.forEach(currentPeer => {
-         if((oldPeer.id === currentPeer.id) && (oldPeer != currentPeer) && (this.peer.id != currentPeer.id)){
-         diffPeer = currentPeer;
-         for(let key in currentPeer){
-         if(key != 'updated_at'){
-         if(currentPeer[key] != oldPeer[key]){
-         diff[key] = currentPeer[key];
-         }
-         }
-         }
-         }
-         });
-         });
+      let diffPeer = null;
+      let diff = {};
+      oldPeers.forEach(oldPeer => {
+        currentPeers.forEach(currentPeer => {
+          if((oldPeer.id === currentPeer.id) && (oldPeer != currentPeer) && (this.peer.id != currentPeer.id)){
+            console.log("found a diff peer");
+            console.log(this.peer);
+            console.log(oldPeer);
+            console.log(currentPeer);
+            diffPeer = currentPeer;
+          }
+        });
+      });
 
-
-         if(diff.connections){
+      console.log("diffPeer: ", diffPeer);
+      /* if(diff.connections){
          diff.connections.forEach(connection => {
          if(connection.for === this.peer.id){
          if(connection.offer){
@@ -147,16 +151,31 @@ class LudicConnect {
   }
 
   onPeerJoined(peer){
-    if(this.peer.created_at < peer.created_at){
-      Peer.setUpPeerConnection(peer).then(results => {
-        console.log(results);
-      });
-    }
+    peer.connections.forEach(connection => {
+      if(connection.to === this.peer.id){
+        let peerPromise = new Promise(function(resolve, reject){
+          let newPeer = new Peer(peer.id, peer.name, function(e){
+            if(e.candidate == null) {
+              let offer = JSON.stringify(newPeer.pc.localDescription);
+              newPeer.offer = offer;
+              this.peers.push(newPeer);
+              resolve(offer);
+            }
+          }.bind(this));
+        }.bind(this));
+        Promise.all([peerPromise]).then(offer => {
+          console.log("offer");
+          console.log(offer);
+          this.handleOffer(this.peers[this.peers.length - 1], connection.offer);
+        })
+      }
+    });
   }
 
   handleOffer(peer, offer){
     console.log("Handle Offer");
     console.log(offer);
+    peer.handleOffer(offer);
   }
   
   handleAnswer(peer, answer){
