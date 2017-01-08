@@ -230,13 +230,15 @@ var DB = function () {
     }
   }, {
     key: "joinLobby",
-    value: function joinLobby(lobbyId, peer) {
+    value: function joinLobby(lobbyId) {
+      var connections = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+
       var newPeerKey = __WEBPACK_IMPORTED_MODULE_0_firebase___default.a.database().ref().child('peers').push().key;
       var now = new Date().getTime();
       var data = {
         id: newPeerKey,
         lobby_id: lobbyId,
-        connections: peer.connections,
+        connections: connections,
         created_at: now,
         updated_at: now
       };
@@ -248,27 +250,17 @@ var DB = function () {
     }
   }, {
     key: "updatePeer",
-    value: function updatePeer(peer) {
-      var updates = {};
-      updates['/peers/' + peer.id] = peer;
-      return __WEBPACK_IMPORTED_MODULE_0_firebase___default.a.database().ref().update(updates);
-    }
-  }, {
-    key: "watchPeers",
-    value: function watchPeers(lobbyId, cb) {
-      var _this3 = this;
+    value: function updatePeer(lobbyId, peerId, connections) {
+      console.log(peerId);
+      console.log(connections);
+      var peer = {
+        id: peerId,
+        connections: connections
+      };
 
-      this.peerRef = __WEBPACK_IMPORTED_MODULE_0_firebase___default.a.database().ref('peers').orderByChild("lobby_id").equalTo(lobbyId);
-      return this.peerRef.on('value', function (data) {
-        _this3.oldPeers = _this3.peers;
-        _this3.peers = [];
-        var _data = data.val();
-        for (var key in _data) {
-          _this3.peers.push(_data[key]);
-        }
-        cb(_this3.oldPeers, _this3.peers);
-        return _this3.peers;
-      });
+      var updates = {};
+      updates['lobbies/' + lobbyId + '/peers/' + peerId] = peer;
+      return __WEBPACK_IMPORTED_MODULE_0_firebase___default.a.database().ref().update(updates);
     }
   }]);
 
@@ -313,8 +305,8 @@ var LudicConnect = function () {
     this.peers = [];
     this.connectedPeers = [];
     this.isHost = false;
+    this.peerId = null;
     this.lobby = null;
-    this.peer = new __WEBPACK_IMPORTED_MODULE_2__Peer_js__["a" /* default */]();
   }
 
   _createClass(LudicConnect, [{
@@ -327,10 +319,9 @@ var LudicConnect = function () {
       this.isHost = true;
       return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].createLobby(name, type).then(function (lobby) {
         _this.lobby = lobby;
-        return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].joinLobby(lobby.id, _this.peer).then(function (peer) {
+        return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].joinLobby(lobby.id).then(function (peer) {
           console.log(peer);
-          _this.peer.id = peer.id;
-          _this.peer.created_at = peer.created_at;
+          _this.peerId = peer.id;
           __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].watchLobby(lobby.id, _this.onLobbyUpdated.bind(_this));
           return lobby;
         });
@@ -348,22 +339,28 @@ var LudicConnect = function () {
     value: function joinLobby(lobby) {
       var _this2 = this;
 
+      console.log("joinLobby: ", lobby);
       this.lobby = lobby;
       var promises = [];
 
       var _loop = function _loop(key) {
         var peer = lobby.peers[key];
-        var peerPromise = new Promise(function (resolve, reject) {
-          var newPeer = new __WEBPACK_IMPORTED_MODULE_2__Peer_js__["a" /* default */](peer.id, peer.name, function (e) {
-            if (e.candidate == null) {
-              var offer = JSON.stringify(newPeer.pc.localDescription);
-              newPeer.offer = offer;
-              resolve(offer);
+        var newPeer = new __WEBPACK_IMPORTED_MODULE_2__Peer_js__["a" /* default */](peer.id, peer.name);
+        _this2.peers.push(newPeer);
+        var promise = new Promise(function (resolve, reject) {
+          newPeer.setUpPeerConnection(function (offer) {
+            if (offer.candidate == null) {
+              var _offer = JSON.stringify(newPeer.pc.localDescription);
+              console.log(_offer);
+              newPeer.offer = _offer;
+              resolve(_offer);
+              return _offer;
+            } else {
+              return null;
             }
-          }.bind(this));
-          this.peers.push(newPeer);
-        }.bind(_this2));
-        promises.push(peerPromise);
+          }, null);
+        });
+        promises.push(promise);
       };
 
       for (var key in lobby.peers) {
@@ -371,20 +368,20 @@ var LudicConnect = function () {
       }
 
       Promise.all(promises).then(function (results) {
+        /* Update the Lobby here with these Offers */
+        var connections = [];
         _this2.peers.forEach(function (peer) {
           var connection = {
-            to: peer.id,
+            for: peer.id,
             offer: peer.offer
           };
-          _this2.peer.connections.push(connection);
+          connections.push(connection);
         });
-
-        return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].joinLobby(lobby.id, _this2.peer).then(function (peer) {
-          _this2.peer.created_at = peer.created_at;
-          _this2.peer.id = peer.id;
+        console.log(connections);
+        __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].joinLobby(lobby.id, connections).then(function (peer) {
           __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].watchLobby(lobby.id, _this2.onLobbyUpdated.bind(_this2));
-          return peer;
         });
+        console.log("connections: ", connections);
       });
     }
   }, {
@@ -404,9 +401,6 @@ var LudicConnect = function () {
         }
       }
     }
-
-    /* Events */
-
   }, {
     key: 'onLobbyUpdated',
     value: function onLobbyUpdated(oldLobby, currentLobby) {
@@ -435,9 +429,9 @@ var LudicConnect = function () {
           }
 
           if (oldPeers.length < currentPeers.length) {
-            if (_this3.peer.id != currentPeers[currentPeers.length - 1].id) {
+            if (_this3.peerId != currentPeers[currentPeers.length - 1].id) {
               return {
-                v: _this3.onPeerJoined(currentPeers[currentPeers.length - 1])
+                v: _this3.onPeerJoined(currentLobby.id, currentPeers[currentPeers.length - 1])
               };
             } else {
 
@@ -451,7 +445,7 @@ var LudicConnect = function () {
           var diff = {};
           oldPeers.forEach(function (oldPeer) {
             currentPeers.forEach(function (currentPeer) {
-              if (oldPeer.id === currentPeer.id && oldPeer != currentPeer && _this3.peer.id != currentPeer.id) {
+              if (oldPeer.id === currentPeer.id && oldPeer != currentPeer && _this3.peerId != currentPeer.id) {
                 console.log("found a diff peer");
                 console.log(_this3.peer);
                 console.log(oldPeer);
@@ -461,8 +455,8 @@ var LudicConnect = function () {
             });
           });
 
-          console.log("diffPeer: ", diffPeer);
           /* if(diff.connections){
+             console.log("diffPeer: ", diffPeer);
              diff.connections.forEach(connection => {
              if(connection.for === this.peer.id){
              if(connection.offer){
@@ -489,25 +483,38 @@ var LudicConnect = function () {
     }
   }, {
     key: 'onPeerJoined',
-    value: function onPeerJoined(peer) {
+    value: function onPeerJoined(lobbyId, peer) {
       var _this4 = this;
 
       peer.connections.forEach(function (connection) {
-        if (connection.to === _this4.peer.id) {
-          var peerPromise = new Promise(function (resolve, reject) {
-            var newPeer = new __WEBPACK_IMPORTED_MODULE_2__Peer_js__["a" /* default */](peer.id, peer.name, function (e) {
-              if (e.candidate == null) {
-                var offer = JSON.stringify(newPeer.pc.localDescription);
-                newPeer.offer = offer;
-                this.peers.push(newPeer);
-                resolve(newPeer);
-              }
-            }.bind(this), connection.offer);
-          }.bind(_this4));
-          Promise.all([peerPromise]).then(function (peer) {
-            console.log("update with an anwser now");
-            console.log(peer);
-          });
+        if (connection.for === _this4.peerId) {
+          (function () {
+            var newPeer = new __WEBPACK_IMPORTED_MODULE_2__Peer_js__["a" /* default */](peer.id, peer.name);
+            _this4.peers.push(newPeer);
+            var offer = JSON.parse(connection.offer);
+            var promise = new Promise(function (resolve, reject) {
+              newPeer.setUpPeerConnection(function (answer) {
+                if (offer.candidate == null) {
+                  var _answer = JSON.stringify(newPeer.pc.localDescription);
+                  newPeer.answer = _answer;
+                  resolve(offer);
+                  return offer;
+                } else {
+                  return null;
+                }
+              }, offer);
+            }).then(function (results) {
+              var connections = [];
+              _this4.peers.forEach(function (peer) {
+                var connection = {
+                  for: peer.id,
+                  answer: peer.answer
+                };
+                connections.push(connection);
+              });
+              __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].updatePeer(lobbyId, _this4.peerId, connections);
+            });
+          })();
         }
       });
     }
@@ -936,7 +943,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 
 var Peer = function () {
-  function Peer(id, name, cb, offer) {
+  function Peer(id, name) {
     _classCallCheck(this, Peer);
 
     this.config = {
@@ -953,39 +960,38 @@ var Peer = function () {
     this.pc = null;
     this.dc = null;
     this.connections = [];
-    this.setUpPeerConnection(cb, offer);
   }
 
   _createClass(Peer, [{
     key: 'setUpPeerConnection',
-    value: function setUpPeerConnection(cb, offer) {
+    value: function setUpPeerConnection(iceCB, hostOffer) {
       var _this = this;
 
       this.pc = new RTCPeerConnection(this.config, this.options);
+      this.createDataChannel();
 
-      if (offer) {
-        this.handleOffer(offer);
-      }
-
-      if (cb) {
-        this.pc.onicecandidate = cb;
+      if (iceCB) {
+        this.pc.onicecandidate = iceCB;
       } else {
         this.pc.onicecandidate = this.onIceCandidate.bind(this);
       }
 
-      this.createDataChannel();
-
-      return this.pc.createOffer().then(function (desc) {
-        return _this.pc.setLocalDescription(desc).then(function () {
-          return desc;
+      if (hostOffer) {
+        this.handleOffer(hostOffer);
+      } else {
+        console.log("else");
+        return this.pc.createOffer().then(function (desc) {
+          return _this.pc.setLocalDescription(desc).then(function () {
+            return desc;
+          }, function (error) {
+            console.error(error);
+            return Promise.reject(error);
+          });
         }, function (error) {
           console.error(error);
           return Promise.reject(error);
         });
-      }, function (error) {
-        console.error(error);
-        return Promise.reject(error);
-      });
+      }
     }
   }, {
     key: 'onIceCandidate',
@@ -1003,9 +1009,11 @@ var Peer = function () {
     value: function handleOffer(offer) {
       var _this2 = this;
 
-      var desc = new RTCSessionDescription(JSON.parse(offer));
+      var desc = new RTCSessionDescription(offer);
       return this.pc.setRemoteDescription(desc).then(function (results) {
-        _this2.createAnswer().then(function (desc) {}, function (error) {
+        _this2.createAnswer().then(function (answer) {
+          return answer;
+        }, function (error) {
           return Promise.reject(error);
         });
         return results;

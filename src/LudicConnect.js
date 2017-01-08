@@ -8,18 +8,17 @@ class LudicConnect {
     this.peers = [];
     this.connectedPeers = [];
     this.isHost = false;
+    this.peerId = null;
     this.lobby = null;
-    this.peer = new Peer();
   }
 
   createLobby(name, type="peer"){
     this.isHost = true;
     return DB.createLobby(name, type).then(lobby => {
       this.lobby = lobby;
-      return DB.joinLobby(lobby.id, this.peer).then(peer => {
+      return DB.joinLobby(lobby.id).then(peer => {
         console.log(peer);
-        this.peer.id = peer.id;
-        this.peer.created_at = peer.created_at;
+        this.peerId = peer.id;
         DB.watchLobby(lobby.id, this.onLobbyUpdated.bind(this));
         return lobby;
       });
@@ -32,38 +31,44 @@ class LudicConnect {
   }
 
   joinLobby(lobby){
+    console.log("joinLobby: ", lobby);
     this.lobby = lobby;
     let promises = [];
     for(let key in lobby.peers){
       let peer = lobby.peers[key];
-      let peerPromise = new Promise(function(resolve, reject){
-        let newPeer = new Peer(peer.id, peer.name, function(e){
-          if(e.candidate == null) {
+      let newPeer = new Peer(peer.id, peer.name);
+      this.peers.push(newPeer);
+      let promise = new Promise((resolve, reject) => {
+        newPeer.setUpPeerConnection((offer)=> {
+          if(offer.candidate == null){
             let offer = JSON.stringify(newPeer.pc.localDescription);
+            console.log(offer);
             newPeer.offer = offer;
-            resolve(offer)
-          } 
-        }.bind(this));
-        this.peers.push(newPeer);
-      }.bind(this));
-      promises.push(peerPromise);
+            resolve(offer);
+            return offer;
+          } else {
+            return null;
+          }
+        }, null);
+      });
+      promises.push(promise);
     }
-    
+
     Promise.all(promises).then(results => {
+      /* Update the Lobby here with these Offers */
+      let connections = [];
       this.peers.forEach(peer => {
         let connection = {
-          to: peer.id,
+          for: peer.id,
           offer: peer.offer
         };
-        this.peer.connections.push(connection);
+        connections.push(connection);
       });
-
-      return DB.joinLobby(lobby.id, this.peer).then(peer => {
-        this.peer.created_at = peer.created_at;
-        this.peer.id = peer.id;
+      console.log(connections);
+      DB.joinLobby(lobby.id, connections).then(peer => {
         DB.watchLobby(lobby.id, this.onLobbyUpdated.bind(this));
-        return peer;
       });
+      console.log("connections: ", connections);
     });
   }
 
@@ -83,7 +88,6 @@ class LudicConnect {
     }
   }
 
-  /* Events */
   onLobbyUpdated(oldLobby, currentLobby){
     /* console.log("onLobbyUpdated");
        console.log("oldLobby: ", oldLobby);
@@ -105,8 +109,8 @@ class LudicConnect {
       }
 
       if(oldPeers.length < currentPeers.length){
-        if(this.peer.id != currentPeers[currentPeers.length - 1].id){
-          return this.onPeerJoined(currentPeers[currentPeers.length - 1]);
+        if(this.peerId != currentPeers[currentPeers.length - 1].id){
+          return this.onPeerJoined(currentLobby.id, currentPeers[currentPeers.length - 1]);
         } else {
 
           return;
@@ -117,7 +121,7 @@ class LudicConnect {
       let diff = {};
       oldPeers.forEach(oldPeer => {
         currentPeers.forEach(currentPeer => {
-          if((oldPeer.id === currentPeer.id) && (oldPeer != currentPeer) && (this.peer.id != currentPeer.id)){
+          if((oldPeer.id === currentPeer.id) && (oldPeer != currentPeer) && (this.peerId != currentPeer.id)){
             console.log("found a diff peer");
             console.log(this.peer);
             console.log(oldPeer);
@@ -127,8 +131,9 @@ class LudicConnect {
         });
       });
 
-      console.log("diffPeer: ", diffPeer);
+
       /* if(diff.connections){
+         console.log("diffPeer: ", diffPeer);
          diff.connections.forEach(connection => {
          if(connection.for === this.peer.id){
          if(connection.offer){
@@ -150,23 +155,34 @@ class LudicConnect {
     console.log("onPeerRemoved()");
   }
 
-  onPeerJoined(peer){
+  onPeerJoined(lobbyId, peer){
     peer.connections.forEach(connection => {
-      if(connection.to === this.peer.id){
-        let peerPromise = new Promise(function(resolve, reject){
-          let newPeer = new Peer(peer.id, peer.name, function(e){
-            if(e.candidate == null) {
-              let offer = JSON.stringify(newPeer.pc.localDescription);
-              newPeer.offer = offer;
-              this.peers.push(newPeer);
-              resolve(newPeer);
+      if(connection.for === this.peerId){
+        let newPeer = new Peer(peer.id, peer.name);
+        this.peers.push(newPeer);
+        let offer = JSON.parse(connection.offer);
+        let promise = new Promise((resolve, reject) => {
+          newPeer.setUpPeerConnection((answer)=> {
+            if(offer.candidate == null){
+              let answer = JSON.stringify(newPeer.pc.localDescription);
+              newPeer.answer = answer;
+              resolve(offer);
+              return offer;
+            } else {
+              return null;
             }
-          }.bind(this), connection.offer);
-        }.bind(this));
-        Promise.all([peerPromise]).then(peer => {
-          console.log("update with an anwser now");
-          console.log(peer);
-        })
+          }, offer);
+        }).then(results => {
+          let connections = [];
+          this.peers.forEach(peer => {
+            let connection = {
+              for: peer.id,
+              answer: peer.answer
+            };
+            connections.push(connection);
+          });
+          DB.updatePeer(lobbyId, this.peerId, connections);
+        });
       }
     });
   }

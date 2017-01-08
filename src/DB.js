@@ -74,13 +74,13 @@ class DB {
     });
   }
 
-  joinLobby(lobbyId, peer){
+  joinLobby(lobbyId, connections=[]){
     let newPeerKey = firebase.database().ref().child('peers').push().key;
     let now = new Date().getTime();
     let data = {
       id: newPeerKey,
       lobby_id: lobbyId,
-      connections: peer.connections,
+      connections: connections,
       created_at: now,
       updated_at: now,
     };
@@ -91,24 +91,17 @@ class DB {
     });
   }
 
-  updatePeer(peer){
-    var updates = {};
-    updates['/peers/' + peer.id] = peer;
-    return firebase.database().ref().update(updates);
-  }
+  updatePeer(lobbyId, peerId, connections){
+    console.log(peerId);
+    console.log(connections);
+    let peer = {
+      id: peerId,
+      connections: connections,
+    };
 
-  watchPeers(lobbyId, cb){
-    this.peerRef = firebase.database().ref('peers').orderByChild("lobby_id").equalTo(lobbyId);
-    return this.peerRef.on('value', data => {
-      this.oldPeers = this.peers;
-      this.peers = [];
-      let _data = data.val();
-      for(let key in _data){
-        this.peers.push(_data[key]);
-      }
-      cb(this.oldPeers, this.peers);
-      return this.peers;
-    });
+    var updates = {};
+    updates['lobbies/' + lobbyId + '/peers/' + peerId] = peer;
+    return firebase.database().ref().update(updates);
   }
 }
 

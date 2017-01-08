@@ -1,7 +1,7 @@
 import DB from './DB'
 
 class Peer {
-  constructor(id, name, cb, offer){
+  constructor(id, name){
     this.config = {
       'iceServers': [
         {
@@ -18,34 +18,34 @@ class Peer {
     this.pc = null;
     this.dc = null;
     this.connections = [];
-    this.setUpPeerConnection(cb, offer);
   }
-  setUpPeerConnection(cb, offer){
+  
+  setUpPeerConnection(iceCB, hostOffer){
     this.pc = new RTCPeerConnection(this.config, this.options);
-    
-    if(offer){
-      this.handleOffer(offer);
-    }
-    
-    if(cb){
-      this.pc.onicecandidate = cb;
+    this.createDataChannel();
+
+    if(iceCB){
+      this.pc.onicecandidate = iceCB;
     } else {
       this.pc.onicecandidate = this.onIceCandidate.bind(this);
     }
-
-    this.createDataChannel();
-
-    return this.pc.createOffer().then(desc => {
-      return this.pc.setLocalDescription(desc).then(() => {
-        return desc;
+    
+    if(hostOffer){
+      this.handleOffer(hostOffer);
+    } else {
+      console.log("else");
+      return this.pc.createOffer().then(desc => {
+        return this.pc.setLocalDescription(desc).then(() => {
+          return desc;
+        }, error => {
+          console.error(error);
+          return Promise.reject(error);
+        });
       }, error => {
         console.error(error);
         return Promise.reject(error);
       });
-    }, error => {
-      console.error(error);
-      return Promise.reject(error);
-    });
+    }
   }
 
   onIceCandidate(e){
@@ -59,10 +59,10 @@ class Peer {
   }
 
   handleOffer(offer){
-    let desc = new RTCSessionDescription(JSON.parse(offer));
+    let desc = new RTCSessionDescription(offer);
     return this.pc.setRemoteDescription(desc).then(results => {
-      this.createAnswer().then(desc => {
-        
+      this.createAnswer().then(answer => {
+        return answer;
       }, error => {
         return Promise.reject(error);
       });
