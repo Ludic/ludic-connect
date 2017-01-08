@@ -500,14 +500,13 @@ var LudicConnect = function () {
                 var offer = JSON.stringify(newPeer.pc.localDescription);
                 newPeer.offer = offer;
                 this.peers.push(newPeer);
-                resolve(offer);
+                resolve(newPeer);
               }
-            }.bind(this));
+            }.bind(this), connection.offer);
           }.bind(_this4));
-          Promise.all([peerPromise]).then(function (offer) {
-            console.log("offer");
-            console.log(offer);
-            _this4.handleOffer(_this4.peers[_this4.peers.length - 1], connection.offer);
+          Promise.all([peerPromise]).then(function (peer) {
+            console.log("update with an anwser now");
+            console.log(peer);
           });
         }
       });
@@ -517,7 +516,6 @@ var LudicConnect = function () {
     value: function handleOffer(peer, offer) {
       console.log("Handle Offer");
       console.log(offer);
-      peer.handleOffer(offer);
     }
   }, {
     key: 'handleAnswer',
@@ -938,7 +936,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 
 var Peer = function () {
-  function Peer(id, name, cb) {
+  function Peer(id, name, cb, offer) {
     _classCallCheck(this, Peer);
 
     this.config = {
@@ -955,15 +953,20 @@ var Peer = function () {
     this.pc = null;
     this.dc = null;
     this.connections = [];
-    this.setUpPeerConnection(cb);
+    this.setUpPeerConnection(cb, offer);
   }
 
   _createClass(Peer, [{
     key: 'setUpPeerConnection',
-    value: function setUpPeerConnection(cb) {
+    value: function setUpPeerConnection(cb, offer) {
       var _this = this;
 
       this.pc = new RTCPeerConnection(this.config, this.options);
+
+      if (offer) {
+        this.handleOffer(offer);
+      }
+
       if (cb) {
         this.pc.onicecandidate = cb;
       } else {
@@ -1018,6 +1021,23 @@ var Peer = function () {
         var desc = new RTCSessionDescription(JSON.parse(lobby.answer));
         this.setRemoteDescription(desc).then(function (result) {});
       }
+    }
+  }, {
+    key: 'createAnswer',
+    value: function createAnswer() {
+      var _this3 = this;
+
+      return this.pc.createAnswer().then(function (desc) {
+        return _this3.pc.setLocalDescription(desc).then(function () {
+          return desc;
+        }, function (error) {
+          console.error(error);
+          return Promise.reject(error);
+        });
+      }, function (error) {
+        console.error(error);
+        return Promise.reject(error);
+      });
     }
   }, {
     key: 'setRemoteDescription',

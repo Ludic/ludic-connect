@@ -1,7 +1,7 @@
 import DB from './DB'
 
 class Peer {
-  constructor(id, name, cb){
+  constructor(id, name, cb, offer){
     this.config = {
       'iceServers': [
         {
@@ -18,10 +18,15 @@ class Peer {
     this.pc = null;
     this.dc = null;
     this.connections = [];
-    this.setUpPeerConnection(cb);
+    this.setUpPeerConnection(cb, offer);
   }
-  setUpPeerConnection(cb){
+  setUpPeerConnection(cb, offer){
     this.pc = new RTCPeerConnection(this.config, this.options);
+    
+    if(offer){
+      this.handleOffer(offer);
+    }
+    
     if(cb){
       this.pc.onicecandidate = cb;
     } else {
@@ -76,6 +81,21 @@ class Peer {
       });
     }
   }
+
+  createAnswer(){
+    return this.pc.createAnswer().then(desc => {
+      return this.pc.setLocalDescription(desc).then(() => {
+        return desc;
+      }, error => {
+        console.error(error);
+        return Promise.reject(error);
+      });
+    }, error => {
+      console.error(error);
+      return Promise.reject(error);
+    });
+  }
+
 
 
   setRemoteDescription(desc){

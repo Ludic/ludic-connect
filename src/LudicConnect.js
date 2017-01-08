@@ -159,14 +159,13 @@ class LudicConnect {
               let offer = JSON.stringify(newPeer.pc.localDescription);
               newPeer.offer = offer;
               this.peers.push(newPeer);
-              resolve(offer);
+              resolve(newPeer);
             }
-          }.bind(this));
+          }.bind(this), connection.offer);
         }.bind(this));
-        Promise.all([peerPromise]).then(offer => {
-          console.log("offer");
-          console.log(offer);
-          this.handleOffer(this.peers[this.peers.length - 1], connection.offer);
+        Promise.all([peerPromise]).then(peer => {
+          console.log("update with an anwser now");
+          console.log(peer);
         })
       }
     });
@@ -175,7 +174,7 @@ class LudicConnect {
   handleOffer(peer, offer){
     console.log("Handle Offer");
     console.log(offer);
-    peer.handleOffer(offer);
+
   }
   
   handleAnswer(peer, answer){
