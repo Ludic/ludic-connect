@@ -92,8 +92,6 @@ class DB {
   }
 
   updatePeer(lobbyId, peerId, connections){
-    console.log(peerId);
-    console.log(connections);
     let peer = {
       id: peerId,
       connections: connections,

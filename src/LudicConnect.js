@@ -5,7 +5,7 @@ import DB from './DB.js'
 
 class LudicConnect {
   constructor(){
-    this.peers = [];
+    window.peers = this.peers = [];
     this.connectedPeers = [];
     this.isHost = false;
     this.peerId = null;
@@ -17,7 +17,6 @@ class LudicConnect {
     return DB.createLobby(name, type).then(lobby => {
       this.lobby = lobby;
       return DB.joinLobby(lobby.id).then(peer => {
-        console.log(peer);
         this.peerId = peer.id;
         DB.watchLobby(lobby.id, this.onLobbyUpdated.bind(this));
         return lobby;
@@ -31,7 +30,6 @@ class LudicConnect {
   }
 
   joinLobby(lobby){
-    console.log("joinLobby: ", lobby);
     this.lobby = lobby;
     let promises = [];
     for(let key in lobby.peers){
@@ -42,7 +40,6 @@ class LudicConnect {
         newPeer.setUpPeerConnection((offer)=> {
           if(offer.candidate == null){
             let offer = JSON.stringify(newPeer.pc.localDescription);
-            console.log(offer);
             newPeer.offer = offer;
             resolve(offer);
             return offer;
@@ -64,11 +61,10 @@ class LudicConnect {
         };
         connections.push(connection);
       });
-      console.log(connections);
       DB.joinLobby(lobby.id, connections).then(peer => {
+        this.peerId = peer.id;
         DB.watchLobby(lobby.id, this.onLobbyUpdated.bind(this));
       });
-      console.log("connections: ", connections);
     });
   }
 
@@ -119,33 +115,28 @@ class LudicConnect {
 
       let diffPeer = null;
       let diff = {};
+
       oldPeers.forEach(oldPeer => {
         currentPeers.forEach(currentPeer => {
           if((oldPeer.id === currentPeer.id) && (oldPeer != currentPeer) && (this.peerId != currentPeer.id)){
-            console.log("found a diff peer");
-            console.log(this.peer);
-            console.log(oldPeer);
-            console.log(currentPeer);
             diffPeer = currentPeer;
           }
         });
       });
-
-
-      /* if(diff.connections){
-         console.log("diffPeer: ", diffPeer);
-         diff.connections.forEach(connection => {
-         if(connection.for === this.peer.id){
-         if(connection.offer){
-         this.handleOffer(diffPeer, connection.offer);
-         } else if(connection.answer){
-         this.handleAnswer(diffPeer, connection.answer);
-         }
-         }
-         });
-         } else {
-         
-         } */
+      
+      console.log("diffPeer: ", diffPeer);
+      console.log("peerId: ", this.peerId);
+      if(diffPeer){
+        diffPeer.connections.forEach(connection => {
+          if(connection.for === this.peerId){
+            if(connection.answer){
+              this.handleAnswer(diffPeer, connection.answer);
+            }
+          }
+        });
+      } else {
+        
+      }
     } else {
       this.init = true; 
     }
@@ -187,15 +178,16 @@ class LudicConnect {
     });
   }
 
-  handleOffer(peer, offer){
-    console.log("Handle Offer");
-    console.log(offer);
-
-  }
-  
-  handleAnswer(peer, answer){
+  handleAnswer(dbPeer, answerString){
     console.log("Handle Answer");
-    console.log(answer);
+    console.log(dbPeer);
+    let answer = JSON.parse(answerString);
+    this.peers.forEach(peer => {
+      if(peer.id === dbPeer.id){
+        peer.setRemoteDescription(answer);
+        window.Peer = peer;
+      }
+    });
   }
   
 

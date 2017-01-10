@@ -33,7 +33,6 @@ class Peer {
     if(hostOffer){
       this.handleOffer(hostOffer);
     } else {
-      console.log("else");
       return this.pc.createOffer().then(desc => {
         return this.pc.setLocalDescription(desc).then(() => {
           return desc;
@@ -96,9 +95,8 @@ class Peer {
     });
   }
 
-
-
-  setRemoteDescription(desc){
+  setRemoteDescription(answer){
+    let desc = new RTCSessionDescription(answer);
     return this.pc.setRemoteDescription(desc).then(results => {
       return results;
     }, error => {
@@ -126,6 +124,7 @@ class Peer {
     console.log("Peer.onDataChannelMessage", e);
   }
 
+  /* ICE */
   addIceCandidate(iceCandidate){
     this.pc.addIceCandidate(iceCandidate);
   }

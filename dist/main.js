@@ -251,8 +251,6 @@ var DB = function () {
   }, {
     key: "updatePeer",
     value: function updatePeer(lobbyId, peerId, connections) {
-      console.log(peerId);
-      console.log(connections);
       var peer = {
         id: peerId,
         connections: connections
@@ -302,7 +300,7 @@ var LudicConnect = function () {
   function LudicConnect() {
     _classCallCheck(this, LudicConnect);
 
-    this.peers = [];
+    window.peers = this.peers = [];
     this.connectedPeers = [];
     this.isHost = false;
     this.peerId = null;
@@ -320,7 +318,6 @@ var LudicConnect = function () {
       return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].createLobby(name, type).then(function (lobby) {
         _this.lobby = lobby;
         return __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].joinLobby(lobby.id).then(function (peer) {
-          console.log(peer);
           _this.peerId = peer.id;
           __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].watchLobby(lobby.id, _this.onLobbyUpdated.bind(_this));
           return lobby;
@@ -339,7 +336,6 @@ var LudicConnect = function () {
     value: function joinLobby(lobby) {
       var _this2 = this;
 
-      console.log("joinLobby: ", lobby);
       this.lobby = lobby;
       var promises = [];
 
@@ -351,7 +347,6 @@ var LudicConnect = function () {
           newPeer.setUpPeerConnection(function (offer) {
             if (offer.candidate == null) {
               var _offer = JSON.stringify(newPeer.pc.localDescription);
-              console.log(_offer);
               newPeer.offer = _offer;
               resolve(_offer);
               return _offer;
@@ -377,11 +372,10 @@ var LudicConnect = function () {
           };
           connections.push(connection);
         });
-        console.log(connections);
         __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].joinLobby(lobby.id, connections).then(function (peer) {
+          _this2.peerId = peer.id;
           __WEBPACK_IMPORTED_MODULE_3__DB_js__["a" /* default */].watchLobby(lobby.id, _this2.onLobbyUpdated.bind(_this2));
         });
-        console.log("connections: ", connections);
       });
     }
   }, {
@@ -443,32 +437,26 @@ var LudicConnect = function () {
 
           var diffPeer = null;
           var diff = {};
+
           oldPeers.forEach(function (oldPeer) {
             currentPeers.forEach(function (currentPeer) {
               if (oldPeer.id === currentPeer.id && oldPeer != currentPeer && _this3.peerId != currentPeer.id) {
-                console.log("found a diff peer");
-                console.log(_this3.peer);
-                console.log(oldPeer);
-                console.log(currentPeer);
                 diffPeer = currentPeer;
               }
             });
           });
 
-          /* if(diff.connections){
-             console.log("diffPeer: ", diffPeer);
-             diff.connections.forEach(connection => {
-             if(connection.for === this.peer.id){
-             if(connection.offer){
-             this.handleOffer(diffPeer, connection.offer);
-             } else if(connection.answer){
-             this.handleAnswer(diffPeer, connection.answer);
-             }
-             }
-             });
-             } else {
-             
-             } */
+          console.log("diffPeer: ", diffPeer);
+          console.log("peerId: ", _this3.peerId);
+          if (diffPeer) {
+            diffPeer.connections.forEach(function (connection) {
+              if (connection.for === _this3.peerId) {
+                if (connection.answer) {
+                  _this3.handleAnswer(diffPeer, connection.answer);
+                }
+              }
+            });
+          } else {}
         }();
 
         if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
@@ -519,16 +507,17 @@ var LudicConnect = function () {
       });
     }
   }, {
-    key: 'handleOffer',
-    value: function handleOffer(peer, offer) {
-      console.log("Handle Offer");
-      console.log(offer);
-    }
-  }, {
     key: 'handleAnswer',
-    value: function handleAnswer(peer, answer) {
+    value: function handleAnswer(dbPeer, answerString) {
       console.log("Handle Answer");
-      console.log(answer);
+      console.log(dbPeer);
+      var answer = JSON.parse(answerString);
+      this.peers.forEach(function (peer) {
+        if (peer.id === dbPeer.id) {
+          peer.setRemoteDescription(answer);
+          window.Peer = peer;
+        }
+      });
     }
   }, {
     key: 'onMessage',
@@ -979,7 +968,6 @@ var Peer = function () {
       if (hostOffer) {
         this.handleOffer(hostOffer);
       } else {
-        console.log("else");
         return this.pc.createOffer().then(function (desc) {
           return _this.pc.setLocalDescription(desc).then(function () {
             return desc;
@@ -1049,7 +1037,8 @@ var Peer = function () {
     }
   }, {
     key: 'setRemoteDescription',
-    value: function setRemoteDescription(desc) {
+    value: function setRemoteDescription(answer) {
+      var desc = new RTCSessionDescription(answer);
       return this.pc.setRemoteDescription(desc).then(function (results) {
         return results;
       }, function (error) {
@@ -1082,6 +1071,9 @@ var Peer = function () {
     value: function onDataChannelMessage(e) {
       console.log("Peer.onDataChannelMessage", e);
     }
+
+    /* ICE */
+
   }, {
     key: 'addIceCandidate',
     value: function addIceCandidate(iceCandidate) {
