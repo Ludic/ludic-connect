@@ -17,7 +17,6 @@ class Peer {
     this.name = name;
     this.pc = null;
     this.dc = null;
-    this.connections = [];
   }
   
   setUpPeerConnection(iceCB, hostOffer){

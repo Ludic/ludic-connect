@@ -948,7 +948,6 @@ var Peer = function () {
     this.name = name;
     this.pc = null;
     this.dc = null;
-    this.connections = [];
   }
 
   _createClass(Peer, [{
